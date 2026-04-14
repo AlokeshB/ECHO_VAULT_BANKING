@@ -32,15 +32,33 @@ const UserSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    accountApprovalStatus: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+    },
     kycStatus: {
         type: String,
         enum: ['pending', 'verified', 'rejected'],
         default: 'pending'
     },
+    kycData: {
+        panNumber: { type: String, unique: true, sparse: true, required: true, select: false },
+        aadhaarNumber: { type: String, unique: true, sparse: true, required: true, select: false },
+        submittedAt: Date,
+        verifiedAt: Date,
+        rejectedAt: Date,
+        rejectionReason: String
+    },
     twoFactorEnabled: {
         type: Boolean,
         default: false
     },
+    otp: {
+        type: String,
+        select: false
+    },
+    otpExpires: { type: Date, select: false },
     loginAttempts: {
         type: Number,
         default: 0

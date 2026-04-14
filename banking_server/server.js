@@ -1,4 +1,6 @@
 const dotenv = require('dotenv');
+const socketIo = require('socket.io');
+const notificationService = require('./src/services/notificationService');
 const connectDB = require('./src/config/db');
 process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
@@ -11,6 +13,23 @@ const PORT = process.env.PORT || 5200;
 app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
+
+const io = socketIo(app, {
+    cors: {
+        origin: '*',
+    }
+});
+notificationService.initialize(io);
+io.on('connection', (socket) => {
+    socket.on('join', (userId) => {
+        socket.join(userId);
+        console.log(`User ${userId} connected to notifications`);
+    });
+    socket.on('disconnect', () => {
+        console.log('User disconnected from notifications');
+    });
+});
+
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
     server.close(() => {

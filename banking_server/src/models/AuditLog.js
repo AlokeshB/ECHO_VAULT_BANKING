@@ -9,13 +9,14 @@ const auditLogSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    message: String,
     resource: {
         type: String,
-        required: true
+        // required: true
     },
     resourceId: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true
+        // required: true
     },
     details: {
         type: Object,
