@@ -1,50 +1,47 @@
 const AuditLog = require('../models/AuditLog');
 const Logger = require('../utils/logger');
+
 let io;
-exports.init = (socketToInstance) => {
+
+exports.initialize = (socketToInstance) => {
     io = socketToInstance;
-    // io.on('connection', (socket) => {
-    //     Logger.info(`New client connected: ${socket.id}`);
-    //     socket.on('join', (userId) => {
-    //         socket.join(userId);
-    //         Logger.info(`User ${userId} joined notifications`);
-    //     });
-    //     socket.on('disconnect', () => {
-    //         Logger.info(`Client disconnected: ${socket.id}`);
-    //     });
-    // });
-}
+};
+
 /**
  * @desc Send real-time notification to user device via Socket.IO and log to DB
  */
 const sendNotification = async ({ userId, action, message, resource, resourceId, details, ipAddress, userAgent, location, deviceId }) => {
-    try{
+    const notificationAction = action || 'SYSTEM_NOTIFICATION';
+    const notificationResource = resource || 'general';
+    
+    try {
         if (io) {
             io.to(userId).emit('notification', {
-                action,
+                action: notificationAction,
                 message,
-                resource,
+                resource: notificationResource,
                 resourceId,
                 details,
                 timestamp: new Date()
             });
-            Logger.info(`Notification sent to user ${userId} for action ${action} on resource ${resource}`);
+            Logger.info(`Notification sent to user ${userId} for action ${notificationAction} on resource ${notificationResource}`);
         }
+        
         await AuditLog.create({
             user: userId,
-            action,
-            resource,
-            message,
-            resourceId,
-            details,
-            ipAddress,
-            userAgent,
-            location,
-            deviceId
+            action: notificationAction,
+            resource: notificationResource,
+            resourceId: resourceId || null,
+            message: message,
+            details: { ...details },
+            ipAddress: ipAddress || '127.0.0.1',
+            userAgent: userAgent || 'Unknown',
+            location: location || null,
+            deviceId: deviceId || null
         });
-        Logger.info(`Audit log created for user ${userId} action ${action} on resource ${resource}`);
+        Logger.info(`Audit log created for user ${userId} action ${notificationAction} on resource ${notificationResource}`);
     }
-    catch(err){
+    catch (err) {
         Logger.error(`Error sending notification: ${err.message}`);
     }
 };
@@ -52,22 +49,22 @@ const sendNotification = async ({ userId, action, message, resource, resourceId,
 /**
  * @desc Admin Actions to be notified to users/Support staff
  */
-exports.notifyAdminAction = async ({ userId, action, message}) => {
-    await sendNotification({ userId, action, message, 'resource': 'admin-action' });
-}
+exports.notifyAdminAction = async ({ userId, action, message }) => {
+    await sendNotification({ userId, action, message, resource: 'admin-action' });
+};
 
 /**
  * @desc User/Support Actions to be notified to Admin staff
  */
-exports.notifyUserAction = async ({ userId, action, message}) => {
-    try{
+exports.notifyUserAction = async ({ userId, action, message }) => {
+    try {
         const User = require('../models/User');
         const adminUsers = await User.find({ role: 'admin' }).select('_id');
         adminUsers.forEach(admin => {
-            sendNotification({ userId: admin._id.toString(), action, message, 'resource': 'user-action' });
+            sendNotification({ userId: admin._id.toString(), action, message, resource: 'user-action' });
         });
     }
-    catch(err){
+    catch (err) {
         Logger.error(`Error notifying admin: ${err.message}`);
     }
 };
