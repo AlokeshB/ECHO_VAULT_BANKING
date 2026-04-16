@@ -14,6 +14,7 @@ exports.protect = async (req, res, next) => {
         }
         
         if (!token) {
+            Logger.warn(`Unauthorized access attempt without token to: ${req.originalUrl}`);
             return res.status(401).json({
                 success: false,
                 message: 'Unauthorized access. Please log in.'
@@ -24,6 +25,7 @@ exports.protect = async (req, res, next) => {
         const CurrentUser = await User.findById(decoded.id);
         
         if (!CurrentUser) {
+            Logger.warn(`Token user not found for token decode: ${decoded.id}`);
             return res.status(401).json({
                 success: false,
                 message: 'Unauthorized access. User belonging to this token was not found.'
@@ -34,6 +36,20 @@ exports.protect = async (req, res, next) => {
         next();
     }
     catch (err) {
+        if (err.name === 'JsonWebTokenError') {
+            Logger.warn(`Invalid token attempt: ${err.message}`);
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid token. Please log in again.'
+            });
+        }
+        if (err.name === 'TokenExpiredError') {
+            Logger.warn(`Expired token attempt`);
+            return res.status(401).json({
+                success: false,
+                message: 'Token expired. Please log in again.'
+            });
+        }
         Logger.error(`Authentication error: ${err.message}`);
         return res.status(401).json({
             success: false,
@@ -58,4 +74,18 @@ exports.restrictTo = (...roles) => {
         }
         next();
     };
+};
+
+/**
+ * @desc Passport error handler middleware
+ */
+exports.handlePassportError = (err, req, res, next) => {
+    if (err) {
+        Logger.warn(`Passport authentication error: ${err.message}`);
+        return res.status(401).json({
+            success: false,
+            message: err.message || 'Authentication failed'
+        });
+    }
+    next();
 };

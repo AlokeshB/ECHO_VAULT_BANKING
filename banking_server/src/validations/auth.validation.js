@@ -6,17 +6,17 @@ const Logger = require('../utils/logger');
  */
 const schemas = {
     registerCustomer: Joi.object().keys({
-        firstName: Joi.string().required().min(2).max(50).messages({
+        firstName: Joi.string().required().min(2).max(50).trim().messages({
             'string.empty': 'First name is required',
             'string.min': 'First name must be at least 2 characters',
             'string.max': 'First name cannot exceed 50 characters'
         }),
-        lastName: Joi.string().required().min(2).max(50).messages({
+        lastName: Joi.string().required().min(2).max(50).trim().messages({
             'string.empty': 'Last name is required',
             'string.min': 'Last name must be at least 2 characters',
             'string.max': 'Last name cannot exceed 50 characters'
         }),
-        email: Joi.string().required().email().messages({
+        email: Joi.string().required().email().lowercase().messages({
             'string.empty': 'Email is required',
             'string.email': 'Please provide a valid email address'
         }),
@@ -27,8 +27,28 @@ const schemas = {
         })
     }),
 
+    loginEmail: Joi.object().keys({
+        email: Joi.string().required().email().lowercase().messages({
+            'string.empty': 'Email is required',
+            'string.email': 'Please provide a valid email address'
+        }),
+        password: Joi.string().required().messages({
+            'string.empty': 'Password is required'
+        })
+    }),
+
+    loginUserID: Joi.object().keys({
+        userId: Joi.string().required().pattern(/^VBANK\d{4}$/).messages({
+            'string.empty': 'User ID is required',
+            'string.pattern.base': 'Invalid User ID format'
+        }),
+        password: Joi.string().required().messages({
+            'string.empty': 'Password is required'
+        })
+    }),
+
     verifyEmail: Joi.object().keys({
-        email: Joi.string().required().email().messages({
+        email: Joi.string().required().email().lowercase().messages({
             'string.empty': 'Email is required',
             'string.email': 'Please provide a valid email address'
         }),
@@ -40,15 +60,15 @@ const schemas = {
     }),
 
     createSupportUser: Joi.object().keys({
-        firstName: Joi.string().required().min(2).max(50).messages({
+        firstName: Joi.string().required().min(2).max(50).trim().messages({
             'string.empty': 'First name is required',
             'string.min': 'First name must be at least 2 characters'
         }),
-        lastName: Joi.string().required().min(2).max(50).messages({
+        lastName: Joi.string().required().min(2).max(50).trim().messages({
             'string.empty': 'Last name is required',
             'string.min': 'Last name must be at least 2 characters'
         }),
-        email: Joi.string().required().email().messages({
+        email: Joi.string().required().email().lowercase().messages({
             'string.empty': 'Email is required',
             'string.email': 'Please provide a valid email address'
         }),

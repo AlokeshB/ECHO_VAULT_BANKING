@@ -1,7 +1,9 @@
 const express = require('express');
+const passport = require('passport');
 const authController = require('../controllers/auth.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const { validate } = require('../validations/auth.validation');
+const { authRateLimiter } = require('../config/secuirity');
 
 const router = express.Router();
 
@@ -10,14 +12,40 @@ const router = express.Router();
  * @desc User self-registration
  * @access Public
  */
-router.post('/register', validate('registerCustomer'), authController.registerCustomer);
+router.post('/register', authRateLimiter, validate('registerCustomer'), authController.registerCustomer);
 
 /**
  * @route POST /api/v1/auth/verify-email
  * @desc Verify email with OTP
  * @access Public
  */
-router.post('/verify-email', validate('verifyEmail'), authController.verifyEmail);
+router.post('/verify-email', authRateLimiter, validate('verifyEmail'), authController.verifyEmail);
+
+/**
+ * @route POST /api/v1/auth/login-email
+ * @desc Login with email and password
+ * @access Public
+ */
+router.post(
+    '/login-email',
+    authRateLimiter,
+    validate('loginEmail'),
+    passport.authenticate('email-local', { session: false }),
+    authController.loginWithEmail
+);
+
+/**
+ * @route POST /api/v1/auth/login-userid
+ * @desc Login with custom UserID and password
+ * @access Public
+ */
+router.post(
+    '/login-userid',
+    authRateLimiter,
+    validate('loginUserID'),
+    passport.authenticate('userid-local', { session: false }),
+    authController.loginWithUserID
+);
 
 /**
  * @route POST /api/v1/auth/create-support
