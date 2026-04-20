@@ -19,6 +19,13 @@ exports.authRateLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false
 });
+exports.transferLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10,
+    message: { success: false, message: 'Too many transfer attempts, for your secuirity, please try again after 15 minutes' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
 // Helmet configurations
 exports.configureHelmet = () => {
