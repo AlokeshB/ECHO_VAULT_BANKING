@@ -18,7 +18,7 @@ const {
     verifyRequestOrigin 
 } = require('./middlewares/secuirity.middleware');
 const authRoutes = require('./routes/auth.routes');
-const transactionRoutes = require('./routes/transactionRoutes');
+const transactionRoutes = require('./routes/transaction.routes');
 
 const app = express();
 
