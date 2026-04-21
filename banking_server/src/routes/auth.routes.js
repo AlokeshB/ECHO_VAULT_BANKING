@@ -99,4 +99,89 @@ router.patch(
     authController.reviewKYC
 );
 
+/**
+ * @route POST /api/v1/auth/setup-transaction-pin
+ * @desc User sets up Transaction PIN after KYC verification
+ * @access Private - Customer only (after KYC verified)
+ */
+router.post(
+    '/setup-transaction-pin',
+    authMiddleware.protect,
+    authMiddleware.restrictTo('customer'),
+    validate('setupTransactionPin'),
+    authController.setupTransactionPin
+);
+
+/**
+ * @route PATCH /api/v1/auth/change-password
+ * @desc Change password with OTP verification
+ * @access Private
+ */
+router.patch(
+    '/change-password',
+    authMiddleware.protect,
+    validate('changePassword'),
+    authController.changePassword
+);
+
+/**
+ * @route POST /api/v1/auth/forgot-password
+ * @desc Request password reset OTP
+ * @access Public
+ */
+router.post(
+    '/forgot-password',
+    authRateLimiter,
+    validate('forgotPassword'),
+    authController.forgotPassword
+);
+
+/**
+ * @route PATCH /api/v1/auth/reset-password
+ * @desc Reset password with OTP
+ * @access Public
+ */
+router.patch(
+    '/reset-password',
+    authRateLimiter,
+    validate('resetPassword'),
+    authController.resetPassword
+);
+
+/**
+ * @route PATCH /api/v1/auth/change-transaction-pin
+ * @desc Change Transaction PIN with OTP verification
+ * @access Private
+ */
+router.patch(
+    '/change-transaction-pin',
+    authMiddleware.protect,
+    validate('changeTransactionPin'),
+    authController.changeTransactionPin
+);
+
+/**
+ * @route POST /api/v1/auth/forgot-transaction-pin
+ * @desc Request Transaction PIN reset OTP
+ * @access Public
+ */
+router.post(
+    '/forgot-transaction-pin',
+    authRateLimiter,
+    validate('forgotTransactionPin'),
+    authController.forgotTransactionPin
+);
+
+/**
+ * @route PATCH /api/v1/auth/reset-transaction-pin
+ * @desc Reset Transaction PIN with OTP
+ * @access Public
+ */
+router.patch(
+    '/reset-transaction-pin',
+    authRateLimiter,
+    validate('resetTransactionPin'),
+    authController.resetTransactionPin
+);
+
 module.exports = router;
