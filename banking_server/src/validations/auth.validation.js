@@ -1,5 +1,6 @@
 const Joi = require('joi');
 const Logger = require('../utils/logger');
+const { errorResponse } = require('../utils/response');
 
 /**
  * @desc Validation schemas for auth routes
@@ -111,6 +112,117 @@ const schemas = {
             }),
             otherwise: Joi.optional()
         })
+    }),
+
+    // Transaction PIN & Password Management Schemas
+    setupTransactionPin: Joi.object().keys({
+        transactionPin: Joi.string().required().length(4).pattern(/^\d+$/).messages({
+            'string.empty': 'Transaction PIN is required',
+            'string.length': 'Transaction PIN must be exactly 4 digits',
+            'string.pattern.base': 'Transaction PIN must contain only digits'
+        }),
+        confirmPin: Joi.string().required().valid(Joi.ref('transactionPin')).messages({
+            'any.only': 'PIN confirmation does not match'
+        }),
+        otp: Joi.string().required().length(6).pattern(/^\d+$/).messages({
+            'string.empty': 'OTP is required',
+            'string.length': 'OTP must be exactly 6 digits',
+            'string.pattern.base': 'OTP must contain only numbers'
+        })
+    }),
+
+    changePassword: Joi.object().keys({
+        currentPassword: Joi.string().required().messages({
+            'string.empty': 'Current password is required'
+        }),
+        newPassword: Joi.string().required().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/).messages({
+            'string.empty': 'New password is required',
+            'string.min': 'Password must be at least 8 characters',
+            'string.pattern.base': 'Password must contain uppercase, lowercase, number, and special character'
+        }),
+        confirmPassword: Joi.string().required().valid(Joi.ref('newPassword')).messages({
+            'any.only': 'Password confirmation does not match'
+        }),
+        otp: Joi.string().required().length(6).pattern(/^\d+$/).messages({
+            'string.empty': 'OTP is required',
+            'string.length': 'OTP must be exactly 6 digits',
+            'string.pattern.base': 'OTP must contain only numbers'
+        })
+    }),
+
+    forgotPassword: Joi.object().keys({
+        email: Joi.string().required().email().lowercase().messages({
+            'string.empty': 'Email is required',
+            'string.email': 'Please provide a valid email address'
+        })
+    }),
+
+    resetPassword: Joi.object().keys({
+        email: Joi.string().required().email().lowercase().messages({
+            'string.empty': 'Email is required',
+            'string.email': 'Please provide a valid email address'
+        }),
+        otp: Joi.string().required().length(6).pattern(/^\d+$/).messages({
+            'string.empty': 'OTP is required',
+            'string.length': 'OTP must be exactly 6 digits',
+            'string.pattern.base': 'OTP must contain only numbers'
+        }),
+        newPassword: Joi.string().required().min(8).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/).messages({
+            'string.empty': 'New password is required',
+            'string.min': 'Password must be at least 8 characters',
+            'string.pattern.base': 'Password must contain uppercase, lowercase, number, and special character'
+        }),
+        confirmPassword: Joi.string().required().valid(Joi.ref('newPassword')).messages({
+            'any.only': 'Password confirmation does not match'
+        })
+    }),
+
+    changeTransactionPin: Joi.object().keys({
+        currentPin: Joi.string().required().length(4).pattern(/^\d+$/).messages({
+            'string.empty': 'Current PIN is required',
+            'string.length': 'Current PIN must be exactly 4 digits',
+            'string.pattern.base': 'Current PIN must contain only digits'
+        }),
+        newPin: Joi.string().required().length(4).pattern(/^\d+$/).messages({
+            'string.empty': 'New PIN is required',
+            'string.length': 'New PIN must be exactly 4 digits',
+            'string.pattern.base': 'New PIN must contain only digits'
+        }),
+        confirmPin: Joi.string().required().valid(Joi.ref('newPin')).messages({
+            'any.only': 'PIN confirmation does not match'
+        }),
+        otp: Joi.string().required().length(6).pattern(/^\d+$/).messages({
+            'string.empty': 'OTP is required',
+            'string.length': 'OTP must be exactly 6 digits',
+            'string.pattern.base': 'OTP must contain only numbers'
+        })
+    }),
+
+    forgotTransactionPin: Joi.object().keys({
+        email: Joi.string().required().email().lowercase().messages({
+            'string.empty': 'Email is required',
+            'string.email': 'Please provide a valid email address'
+        })
+    }),
+
+    resetTransactionPin: Joi.object().keys({
+        email: Joi.string().required().email().lowercase().messages({
+            'string.empty': 'Email is required',
+            'string.email': 'Please provide a valid email address'
+        }),
+        otp: Joi.string().required().length(6).pattern(/^\d+$/).messages({
+            'string.empty': 'OTP is required',
+            'string.length': 'OTP must be exactly 6 digits',
+            'string.pattern.base': 'OTP must contain only numbers'
+        }),
+        newPin: Joi.string().required().length(4).pattern(/^\d+$/).messages({
+            'string.empty': 'New PIN is required',
+            'string.length': 'New PIN must be exactly 4 digits',
+            'string.pattern.base': 'New PIN must contain only digits'
+        }),
+        confirmPin: Joi.string().required().valid(Joi.ref('newPin')).messages({
+            'any.only': 'PIN confirmation does not match'
+        })
     })
 };
 
@@ -143,11 +255,7 @@ const validate = (schemaName) => {
 
             Logger.warn(`Validation error for schema "${schemaName}":`, errorDetails);
 
-            return res.status(400).json({
-                success: false,
-                message: 'Validation failed',
-                errors: errorDetails
-            });
+            return errorResponse(res, errorDetails, 400, 'Validation failed');
         }
 
         req.body = value;
