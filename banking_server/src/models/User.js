@@ -65,16 +65,58 @@ const UserSchema = new mongoose.Schema({
     },
     lockUntil: {
         type: Date
-    }
+    },
+    // Transaction PIN Fields
+    transactionPin: {
+        type: String,
+        select: false,
+        required: false
+    },
+    transactionPinCreatedAt: Date,
+    transactionPinAttempts: {
+        type: Number,
+        default: 0
+    },
+    transactionPinLockedUntil: Date,
+    // Password Reset Fields
+    passwordResetToken: {
+        type: String,
+        select: false
+    },
+    passwordResetExpires: Date,
+    // Transaction PIN Reset Fields
+    transactionPinResetToken: {
+        type: String,
+        select: false
+    },
+    transactionPinResetExpires: Date,
+    lastPasswordChangeAt: Date
 },
     { timestamps: true });
 UserSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
-    this.password = await bcrypt.hash(this.password, 12);
+    if (!this.isModified('password') && !this.isModified('transactionPin')) return next();
+    
+    if (this.isModified('password')) {
+        this.password = await bcrypt.hash(this.password, 12);
+        this.lastPasswordChangeAt = Date.now();
+    }
+    
+    if (this.isModified('transactionPin')) {
+        this.transactionPin = await bcrypt.hash(this.transactionPin, 12);
+        this.transactionPinCreatedAt = Date.now();
+    }
+    
     next();
 });
 UserSchema.methods.correctPassword = async function (candidatePassword, userPassword) {
     return await bcrypt.compare(candidatePassword, userPassword);
+};
+
+/**
+ * @desc Compare provided PIN with stored hashed PIN
+ */
+UserSchema.methods.correctPin = async function (candidatePin, userPin) {
+    return await bcrypt.compare(candidatePin, userPin);
 };
 UserSchema.methods.incLoginAttempts = function () {
     if (this.lockUntil && this.lockUntil < Date.now()) {
