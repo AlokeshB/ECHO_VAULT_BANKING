@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { encrypt } = require('../utils/encryption');
+const { encrypt, decrypt } = require('../utils/encryption');
 const emailService = require('../service/email.service');
 const notificationService = require('../service/notification.service');
 const Logger = require('../utils/logger');
@@ -428,6 +428,63 @@ exports.reviewKYC = async (req, res, next) => {
     }
     catch (err) {
         Logger.error(`KYC review error: ${err.message}`);
+        next(err);
+    }
+};
+
+/**
+ * @desc Get KYC data (with decryption) for admin verification or user view
+ * @route GET /api/v1/auth/kyc-data/:userId
+ * @access Private (Admin only for other users, or user for self)
+ */
+exports.getKYCData = async (req, res, next) => {
+    try {
+        const { userId } = req.params;
+        const requestingUser = req.user._id;
+        const requestingUserRole = req.user.role;
+
+        // Authorization: User can only view their own KYC, or admin can view any
+        if (requestingUserRole !== 'admin' && requestingUser.toString() !== userId) {
+            Logger.warn(`Unauthorized KYC view attempt - User ${requestingUser} accessing ${userId}`);
+            return errorResponse(res, null, 403, 'You do not have permission to view this KYC data.');
+        }
+
+        const user = await User.findById(userId).select('+kycData');
+        if (!user) {
+            Logger.warn(`KYC data requested for non-existent user: ${userId}`);
+            return errorResponse(res, null, 404, 'User not found.');
+        }
+
+        if (!user.kycData || !user.kycData.panNumber) {
+            Logger.info(`KYC data not available for user: ${userId}`);
+            return errorResponse(res, null, 404, 'No KYC data available for this user.');
+        }
+
+        // Decrypt sensitive data
+        const decryptedKYCData = {
+            panNumber: decrypt(user.kycData.panNumber),
+            aadhaarNumber: decrypt(user.kycData.aadhaarNumber),
+            submittedAt: user.kycData.submittedAt,
+            verifiedAt: user.kycData.verifiedAt,
+            rejectedAt: user.kycData.rejectedAt,
+            rejectionReason: user.kycData.rejectionReason
+        };
+
+        Logger.info(`KYC data retrieved and decrypted - User: ${userId}, Requested by: ${requestingUser}`);
+
+        return successResponse(
+            res,
+            {
+                userId: user._id,
+                email: user.email,
+                kycStatus: user.kycStatus,
+                kycData: decryptedKYCData
+            },
+            'KYC data retrieved successfully.',
+            200
+        );
+    } catch (err) {
+        Logger.error(`Error retrieving KYC data: ${err.message}`);
         next(err);
     }
 };
