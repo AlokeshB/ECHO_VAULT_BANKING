@@ -184,4 +184,15 @@ router.patch(
     authController.resetTransactionPin
 );
 
+/**
+ * @route GET /api/v1/auth/kyc-data/:userId
+ * @desc Get decrypted KYC data (Admin or User for self)
+ * @access Private - Admin or account owner
+ */
+router.get(
+    '/kyc-data/:userId',
+    authMiddleware.protect,
+    authController.getKYCData
+);
+
 module.exports = router;
