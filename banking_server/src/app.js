@@ -17,8 +17,7 @@ const {
     sanitizeRequestData,
     verifyRequestOrigin 
 } = require('./middlewares/secuirity.middleware');
-const authRoutes = require('./routes/auth.routes');
-const transactionRoutes = require('./routes/transaction.routes');
+const apiRoutes = require('./routes/index');
 
 const app = express();
 
@@ -54,9 +53,8 @@ app.use(auditMiddleware);
 // Passport Initialization
 app.use(passport.initialize());
 
-// Routes
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/transactions', transactionRoutes);
+// Routes - Using aggregated API routes
+app.use('/api/v1', apiRoutes);
 
 // Response Audit Logging (after routes)
 app.use(logSuccessAudit);
