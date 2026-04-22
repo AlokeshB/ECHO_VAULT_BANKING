@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+const { encrypt, decrypt } = require('../utils/encryption');
 const UserSchema = new mongoose.Schema({
     firstName: {
         type: String,
@@ -130,4 +131,35 @@ UserSchema.methods.incLoginAttempts = function () {
 UserSchema.virtual('isLocked').get(function () {
     return !!(this.lockUntil && this.lockUntil > Date.now());
 });
+
+/**
+ * @desc Get decrypted KYC data (PAN and Aadhaar numbers)
+ */
+UserSchema.methods.getDecryptedKYC = function () {
+    if (!this.kycData || !this.kycData.panNumber) {
+        return null;
+    }
+    
+    return {
+        panNumber: decrypt(this.kycData.panNumber),
+        aadhaarNumber: decrypt(this.kycData.aadhaarNumber),
+        submittedAt: this.kycData.submittedAt,
+        verifiedAt: this.kycData.verifiedAt,
+        rejectedAt: this.kycData.rejectedAt,
+        rejectionReason: this.kycData.rejectionReason
+    };
+};
+
+/**
+ * @desc Set encrypted KYC data (PAN and Aadhaar numbers)
+ */
+UserSchema.methods.setEncryptedKYC = function (panNumber, aadhaarNumber) {
+    this.kycData = {
+        panNumber: encrypt(panNumber),
+        aadhaarNumber: encrypt(aadhaarNumber),
+        submittedAt: Date.now()
+    };
+    return this;
+};
+
 module.exports = mongoose.model('User', UserSchema);
