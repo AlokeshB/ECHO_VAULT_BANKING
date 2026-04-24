@@ -4,11 +4,7 @@ require('dotenv').config();
 const connectDB = async () => {
     try {
         const conn = await mongoose.connect(process.env.DB_URI, {
-            useNewUrlParser: true, // Using the new URL parser to avoid deprecation warnings
-            useUnifiedTopology: true, // Using the new Server Discover and Monitoring engine
             autoIndex: true, // Automatically build indexes defined in the schema
-            useCreateIndex: true, // Using createIndex() to create an index
-            useFindAndModify: false, // will be using findOneAndUpdate() rather than findAndModify()
         });
         logger.info(`MongoDB Connected: ${conn.connection.host}`);
         const isReplicaSet = conn.connection.db.admin().command({ ismaster: 1 }).then((info) => {
@@ -33,3 +29,4 @@ const connectDB = async () => {
         logger.error('MongoDB connection error:', err);
     });
 }
+module.exports = connectDB;

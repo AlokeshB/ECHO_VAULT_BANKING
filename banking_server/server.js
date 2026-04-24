@@ -1,6 +1,6 @@
 const dotenv = require('dotenv');
 const socketIo = require('socket.io');
-const notificationService = require('./src/services/notificationService');
+const notificationService = require('./src/service/notification.service');
 const connectDB = require('./src/config/db');
 process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
@@ -10,11 +10,11 @@ dotenv.config();
 connectDB();
 const app = require('./src/app');
 const PORT = process.env.PORT || 5200;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
 
-const io = socketIo(app, {
+const io = socketIo(server, {
     cors: {
         origin: '*',
     }

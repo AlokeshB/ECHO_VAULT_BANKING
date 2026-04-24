@@ -60,7 +60,7 @@ router.use('/transactions', transactionRoutes);
  * 404 - Not Found Handler
  * ============================================
  */
-router.use('*', (req, res) => {
+router.use((req, res) => {
     return res.status(404).json({
         success: false,
         message: `Route ${req.method} ${req.originalUrl} not found`,
