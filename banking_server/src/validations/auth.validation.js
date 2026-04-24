@@ -106,7 +106,7 @@ const schemas = {
         }),
         rejectionReason: Joi.string().when('action', {
             is: Joi.alternatives().try('reject', 'rejected'),
-            then: Joi.required().min(10).max(500).messages({
+            then: Joi.string().required().min(10).max(500).messages({
                 'string.empty': 'Rejection reason is required when rejecting KYC',
                 'string.min': 'Rejection reason must be at least 10 characters'
             }),

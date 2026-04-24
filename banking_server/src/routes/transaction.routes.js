@@ -12,3 +12,5 @@ router.use(passport.authenticate('jwt', { session: false })); // Protect all rou
 
 // POST /api/v1/transactions/transfer - Initiate a fund transfer between accounts
 router.post('/transfer', authMiddleware.protect, transferLimiter, validateRequest(transferSchema), transactionController.transferFunds);
+
+module.exports = router;

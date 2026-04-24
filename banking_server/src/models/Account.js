@@ -34,5 +34,4 @@ const AccountSchema = new mongoose.Schema({
     }
 },
     { timestamps: true });
-AccountSchema.index({ accountNumber: 1 });
 module.exports = mongoose.model('Account', AccountSchema);

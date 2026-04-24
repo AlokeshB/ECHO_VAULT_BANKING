@@ -44,5 +44,4 @@ const TransactionSchema = new mongoose.Schema({
     }
 },
     { timestamps: true });
-TransactionSchema.index({ transactionReference: 1 });
 module.exports = mongoose.model('Transaction', TransactionSchema);
