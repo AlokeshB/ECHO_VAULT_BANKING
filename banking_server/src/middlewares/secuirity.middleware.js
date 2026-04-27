@@ -168,7 +168,7 @@ exports.validateRequestSize = (maxSize = 10 * 1024) => {
 };
 
 /**
- * @desc Sanitize request data
+ * @desc Sanitize request data and prevent NoSQL injection
  */
 exports.sanitizeRequestData = (req, res, next) => {
     try {
@@ -182,16 +182,69 @@ exports.sanitizeRequestData = (req, res, next) => {
             return value;
         };
 
+        const preventNoSQLInjection = (obj) => {
+            if (obj === null || obj === undefined) return obj;
+            
+            // Check for NoSQL injection patterns
+            const noSQLPatterns = [
+                /^\s*\$\w+/,                           // MongoDB operators like $ne, $gt, etc.
+                /^\s*\{[\s\S]*\}/,                     // Object payloads
+                /,\s*\$where\s*:/i,                    // $where operator
+                /\)\s*\{\s*return/i,                   // JavaScript execution patterns
+            ];
+
+            if (typeof obj === 'string') {
+                // Check for suspicious patterns
+                for (const pattern of noSQLPatterns) {
+                    if (pattern.test(obj)) {
+                        Logger.warn(`Potential NoSQL injection detected in value: ${obj.substring(0, 50)}`);
+                        return null; // Neutralize the injection
+                    }
+                }
+                return sanitizeValue(obj);
+            }
+
+            if (typeof obj === 'object' && obj !== null) {
+                const sanitized = Array.isArray(obj) ? [] : {};
+                
+                for (const key in obj) {
+                    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                        // Check if key itself is suspicious
+                        if (key.startsWith('$')) {
+                            Logger.warn(`Suspicious key detected: ${key} from ${this.ip || 'unknown'}`);
+                            continue; // Skip MongoDB operator keys
+                        }
+
+                        sanitized[key] = preventNoSQLInjection(obj[key]);
+                    }
+                }
+                return sanitized;
+            }
+
+            return obj;
+        };
+
+        // Process request body
         if (req.body && typeof req.body === 'object') {
-            Object.keys(req.body).forEach(key => {
-                req.body[key] = sanitizeValue(req.body[key]);
-            });
+            req.body = preventNoSQLInjection(req.body);
         }
 
+        // Process query parameters
         if (req.query && typeof req.query === 'object') {
+            const sanitizedQuery = {};
             Object.keys(req.query).forEach(key => {
-                req.query[key] = sanitizeValue(req.query[key]);
+                if (!key.startsWith('$')) {
+                    sanitizedQuery[key] = preventNoSQLInjection(req.query[key]);
+                } else {
+                    Logger.warn(`Suspicious query parameter detected: ${key} from ${req.ip}`);
+                }
             });
+            req.query = sanitizedQuery;
+        }
+
+        // Process URL parameters
+        if (req.params && typeof req.params === 'object') {
+            req.params = preventNoSQLInjection(req.params);
         }
 
         next();

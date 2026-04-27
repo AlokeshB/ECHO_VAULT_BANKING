@@ -2,7 +2,6 @@ const express = require('express');
 const morgan = require('morgan');
 const hpp = require('hpp');
 const xssClean = require('xss-clean');
-const mongoSanitize = require('express-mongo-sanitize');
 const passport = require('passport');
 
 const logger = require('./utils/logger');
@@ -36,7 +35,6 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ limit: '10kb', extended: true }));
 
 // Data Sanitization
-app.use(mongoSanitize());
 app.use(xssClean());
 app.use(preventParameterPollution);
 app.use(sanitizeRequestData);
