@@ -44,8 +44,8 @@ const UserSchema = new mongoose.Schema({
         default: 'pending'
     },
     kycData: {
-        panNumber: { type: String, unique: true, sparse: true, required: true, select: false },
-        aadhaarNumber: { type: String, unique: true, sparse: true, required: true, select: false },
+        panNumber: { type: String, unique: true, sparse: true, select: false },
+        aadhaarNumber: { type: String, unique: true, sparse: true, select: false },
         submittedAt: Date,
         verifiedAt: Date,
         rejectedAt: Date,
@@ -94,8 +94,8 @@ const UserSchema = new mongoose.Schema({
     lastPasswordChangeAt: Date
 },
     { timestamps: true });
-UserSchema.pre('save', async function (next) {
-    if (!this.isModified('password') && !this.isModified('transactionPin')) return next();
+UserSchema.pre('save', async function () {
+    if (!this.isModified('password') && !this.isModified('transactionPin')) return;
     
     if (this.isModified('password')) {
         this.password = await bcrypt.hash(this.password, 12);
@@ -106,8 +106,6 @@ UserSchema.pre('save', async function (next) {
         this.transactionPin = await bcrypt.hash(this.transactionPin, 12);
         this.transactionPinCreatedAt = Date.now();
     }
-    
-    next();
 });
 UserSchema.methods.correctPassword = async function (candidatePassword, userPassword) {
     return await bcrypt.compare(candidatePassword, userPassword);

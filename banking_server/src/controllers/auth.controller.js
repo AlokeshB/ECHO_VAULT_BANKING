@@ -2,8 +2,8 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { encrypt, decrypt } = require('../utils/encryption');
-const emailService = require('../service/email.service');
 const notificationService = require('../service/notification.service');
+const adminActionsService = require('../service/admin-actions.service');
 const Logger = require('../utils/logger');
 const { successResponse, errorResponse } = require('../utils/response');
 
@@ -62,16 +62,16 @@ exports.registerCustomer = async (req, res, next) => {
         user.otpExpires = Date.now() + 10 * 60 * 1000; // OTP valid for 10 minutes
         await user.save({ validateBeforeSave: false });
         
-        await emailService.sendOTPEmail(user.email, otp, user._id);
         Logger.info(`Registration successful for email: ${email}`);
         
         return successResponse(
             res,
             {
                 userId: user._id,
-                email: user.email
+                email: user.email,
+                otp: otp // Return OTP for frontend display (in real app, show via in-app notification/SMS)
             },
-            'Registration successful. Please check your email for the OTP to verify your account.',
+            'Registration successful. Use the OTP to verify your account.',
             201
         );
     }
@@ -133,6 +133,32 @@ exports.verifyEmail = async (req, res, next) => {
 exports.loginWithEmail = async (req, res, next) => {
     try {
         const user = req.user;
+        
+        // Check if 2FA (PIN) is enabled
+        if (user.twoFactorEnabled && user.transactionPin) {
+            const token = generateToken(user._id);
+            
+            Logger.info(`User attempting login via email with 2FA enabled: ${user.email}`);
+            
+            return successResponse(
+                res,
+                {
+                    token,
+                    user: {
+                        id: user._id,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        email: user.email,
+                        role: user.role
+                    },
+                    twoFactorRequired: true,
+                    message: 'Please verify your PIN to complete login'
+                },
+                'PIN verification required.',
+                200
+            );
+        }
+        
         const token = generateToken(user._id);
         
         user.lastLoginAt = Date.now();
@@ -150,7 +176,8 @@ exports.loginWithEmail = async (req, res, next) => {
                     lastName: user.lastName,
                     email: user.email,
                     role: user.role,
-                    customUserID: user.customUserID || null
+                    customUserID: user.customUserID || null,
+                    twoFactorEnabled: user.twoFactorEnabled
                 }
             },
             'Login successful.',
@@ -171,6 +198,32 @@ exports.loginWithEmail = async (req, res, next) => {
 exports.loginWithUserID = async (req, res, next) => {
     try {
         const user = req.user;
+        
+        // Check if 2FA (PIN) is enabled
+        if (user.twoFactorEnabled && user.transactionPin) {
+            const token = generateToken(user._id);
+            
+            Logger.info(`User attempting login via UserID with 2FA enabled: ${user.customUserID}`);
+            
+            return successResponse(
+                res,
+                {
+                    token,
+                    user: {
+                        id: user._id,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        customUserID: user.customUserID,
+                        role: user.role
+                    },
+                    twoFactorRequired: true,
+                    message: 'Please verify your PIN to complete login'
+                },
+                'PIN verification required.',
+                200
+            );
+        }
+        
         const token = generateToken(user._id);
         
         user.lastLoginAt = Date.now();
@@ -188,7 +241,8 @@ exports.loginWithUserID = async (req, res, next) => {
                     lastName: user.lastName,
                     email: user.email,
                     customUserID: user.customUserID,
-                    role: user.role
+                    role: user.role,
+                    twoFactorEnabled: user.twoFactorEnabled
                 }
             },
             'Login successful.',
@@ -201,8 +255,60 @@ exports.loginWithUserID = async (req, res, next) => {
     }
 };
 
+/**
+ * @desc 5. Verify 2FA PIN during login
+ * @route POST api/v1/auth/verify-2fa-pin
+ * @access Private (requires token after email/userID login)
+ */
+exports.verify2FAPIN = async (req, res, next) => {
+    try {
+        const { pin } = req.body;
+        const user = await User.findById(req.user._id).select('+transactionPin');
+        
+        if (!user.twoFactorEnabled || !user.transactionPin) {
+            Logger.warn(`2FA verification attempted but not enabled for user: ${user.email}`);
+            return errorResponse(res, null, 403, '2FA is not enabled for this account.');
+        }
+        
+        // Verify PIN
+        const isPinCorrect = await user.correctPin(pin, user.transactionPin);
+        if (!isPinCorrect) {
+            Logger.warn(`Invalid PIN during 2FA verification: ${user.email}`);
+            return errorResponse(res, null, 401, 'Invalid PIN.');
+        }
+        
+        // Generate new complete token with 2FA verified
+        const token = generateToken(user._id);
+        user.lastLoginAt = Date.now();
+        await user.save({ validateBeforeSave: false });
+        
+        Logger.info(`2FA PIN verified for user: ${user.email}`);
+        
+        return successResponse(
+            res,
+            {
+                token,
+                user: {
+                    id: user._id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    customUserID: user.customUserID,
+                    role: user.role,
+                    twoFactorEnabled: user.twoFactorEnabled
+                }
+            },
+            '2FA verification successful. Login complete.',
+            200
+        );
+    } catch (err) {
+        Logger.error(`2FA verification error: ${err.message}`);
+        next(err);
+    }
+};
+
 /** 
- * @desc 5. Admin creates support users
+ * @desc 6. Admin creates support users
  * @route POST api/v1/auth/create-support
  * @access Private (Admin only)
 */
@@ -210,83 +316,43 @@ exports.createSupportUser = async (req, res, next) => {
     try {
         const { firstName, lastName, email, password } = req.body;
         
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            Logger.warn(`Support user creation attempt with existing email: ${email}`);
-            return errorResponse(res, null, 409, 'Email already exists.');
+        const result = await adminActionsService.createSupportUser(firstName, lastName, email, password);
+        
+        if (!result.success) {
+            const statusCode = result.message === 'Email already exists' ? 409 : 400;
+            return errorResponse(res, null, statusCode, result.message);
         }
-        
-        const supportUser = await User.create({
-            firstName,
-            lastName,
-            email,
-            password,
-            role: 'support',
-            isEmailVerified: true,
-            accountApprovalStatus: 'approved'
-        });
-        
-        Logger.info(`Support user created: ${email}`);
         
         return successResponse(
             res,
             {
-                userId: supportUser._id,
-                email: supportUser.email
+                userId: result.userId,
+                email: result.email
             },
-            'Support user created successfully.',
+            result.message,
             201
         );
     }
     catch (err) {
-        if (err.code === 11000) {
-            return errorResponse(res, null, 409, 'Email already exists.');
-        }
         Logger.error(`Support user creation error: ${err.message}`);
         next(err);
     }
 };
 
 /**
- * @desc 6. Admin approves customer accounts & requests KYC
+ * @desc 7. Admin approves customer accounts & requests KYC
  * @route PATCH api/v1/auth/admin/approve-account/:userId
  * @access Private (Admin only)
  */
 exports.approveCustomerAccount = async (req, res, next) => {
     try {
-        const user = await User.findById(req.params.userId);
-        if (!user) {
-            Logger.warn(`Account approval attempt for non-existent user: ${req.params.userId}`);
-            return errorResponse(res, null, 404, 'User not found.');
+        const result = await adminActionsService.approveCustomerAccount(req.params.userId);
+        
+        if (!result.success) {
+            return errorResponse(res, null, 404, result.message);
         }
         
-        user.accountApprovalStatus = 'approved';
-        await user.save({ validateBeforeSave: false });
-        
-        await emailService.sendEmail({
-            to: user.email,
-            subject: 'Account Approved',
-            text: 'Your account has been approved by the admin. Please proceed to submit your KYC documents.',
-            userId: user._id,
-            action: 'ACCOUNT_APPROVED',
-            resource: 'account'
-        });
-        
-        await emailService.sendKYCRequestEmail(user.email, user._id);
-        await notificationService.notifyAdminAction({
-            userId: user._id,
-            action: 'ACCOUNT_APPROVED',
-            message: `Admin approved account for ${user.email}`
-        });
-        
-        Logger.info(`Account approved for user: ${user.email}`);
-        
-        return successResponse(
-            res,
-            null,
-            'Customer account approved and KYC request sent.',
-            200
-        );
+        return successResponse(res, null, result.message, 200);
     }
     catch (err) {
         Logger.error(`Account approval error: ${err.message}`);
@@ -295,7 +361,7 @@ exports.approveCustomerAccount = async (req, res, next) => {
 };
 
 /** 
- * @desc 7. User submits KYC documents
+ * @desc 8. User submits KYC documents
  * @route POST api/v1/auth/submit-kyc
  * @access Private (Logged in Customer only)
 */
@@ -317,19 +383,11 @@ exports.submitKYC = async (req, res, next) => {
         user.kycStatus = 'pending';
         await user.save({ validateBeforeSave: false });
         
-        await emailService.sendEmail({
-            to: user.email,
-            subject: 'KYC Submitted',
-            text: 'Your KYC documents have been submitted successfully. Our team will review them shortly.',
-            userId: user._id,
-            action: 'KYC_SUBMITTED',
-            resource: 'kyc'
-        });
-        
+        // Notify admin about KYC submission
         await notificationService.notifyUserAction({
             userId: user._id,
             action: 'KYC_SUBMITTED',
-            message: `${user.email} submitted KYC documents`
+            message: `${user.firstName} ${user.lastName} (${user.email}) submitted KYC documents for verification`
         });
         
         Logger.info(`KYC submitted for user: ${user.email}`);
@@ -348,83 +406,28 @@ exports.submitKYC = async (req, res, next) => {
 };
 
 /**
- * @desc 8. Admin reviews and verifies KYC documents
+ * @desc 9. Admin reviews and verifies KYC documents
  * @route PATCH api/v1/auth/admin/review-kyc/:userId
  * @access Private (Admin only)
 */
 exports.reviewKYC = async (req, res, next) => {
     try {
         const { action, rejectionReason } = req.body;
-        const user = await User.findById(req.params.userId);
         
-        if (!user) {
-            Logger.warn(`KYC review attempted for non-existent user: ${req.params.userId}`);
-            return errorResponse(res, null, 404, 'User not found.');
+        const result = await adminActionsService.reviewKYC(req.params.userId, action, rejectionReason);
+        
+        if (!result.success) {
+            return errorResponse(res, null, 404, result.message);
         }
         
-        if (action === 'verify' || action === 'verified') {
-            user.kycStatus = 'verified';
-            user.kycData.verifiedAt = Date.now();
-            
-            // Generate custom UserID on successful KYC verification
-            if (!user.customUserID) {
-                user.customUserID = await generateCustomUserID();
-            }
-            
-            await user.save({ validateBeforeSave: false });
-            
-            await emailService.sendKYCOutcomeEmail(user.email, 'approved', user._id);
-            await emailService.sendEmail({
-                to: user.email,
-                subject: 'Your Vault Banking User ID',
-                text: `Congratulations! Your KYC has been verified. Your unique Vault Banking User ID is: ${user.customUserID}. You can use this ID along with your password to log in.`,
-                userId: user._id,
-                action: 'USERID_GENERATED',
-                resource: 'userid'
-            });
-            
-            await notificationService.notifyAdminAction({
-                userId: user._id,
-                action: 'KYC_VERIFIED',
-                message: `KYC verified for ${user.email}. UserID generated: ${user.customUserID}`
-            });
-            
-            Logger.info(`KYC verified for user: ${user.email}, UserID: ${user.customUserID}`);
-            
-            return successResponse(
-                res,
-                {
-                    customUserID: user.customUserID,
-                    email: user.email
-                },
-                'KYC verified successfully.',
-                200
-            );
-        }
-        else if (action === 'reject' || action === 'rejected') {
-            user.kycStatus = 'rejected';
-            user.kycData.rejectedAt = Date.now();
-            user.kycData.rejectionReason = rejectionReason || 'No reason provided';
-            await user.save({ validateBeforeSave: false });
-            
-            await emailService.sendKYCOutcomeEmail(user.email, 'rejected', user._id);
-            await notificationService.notifyAdminAction({
-                userId: user._id,
-                action: 'KYC_REJECTED',
-                message: `KYC rejected for ${user.email}. Reason: ${rejectionReason}`
-            });
-            
-            Logger.info(`KYC rejected for user: ${user.email}`);
-            
-            return successResponse(
-                res,
-                {
-                    rejectionReason: user.kycData.rejectionReason
-                },
-                'KYC rejected. User must resubmit documents.',
-                200
-            );
-        }
+        return successResponse(
+            res,
+            action === 'verify' || action === 'verified' 
+                ? { customUserID: result.customUserID, email: result.email }
+                : { rejectionReason: result.rejectionReason },
+            result.message,
+            200
+        );
     }
     catch (err) {
         Logger.error(`KYC review error: ${err.message}`);
@@ -449,36 +452,21 @@ exports.getKYCData = async (req, res, next) => {
             return errorResponse(res, null, 403, 'You do not have permission to view this KYC data.');
         }
 
-        const user = await User.findById(userId).select('+kycData');
-        if (!user) {
-            Logger.warn(`KYC data requested for non-existent user: ${userId}`);
-            return errorResponse(res, null, 404, 'User not found.');
+        const result = await adminActionsService.getUserKYCData(userId);
+        
+        if (!result.success) {
+            return errorResponse(res, null, 404, result.message);
         }
 
-        if (!user.kycData || !user.kycData.panNumber) {
-            Logger.info(`KYC data not available for user: ${userId}`);
-            return errorResponse(res, null, 404, 'No KYC data available for this user.');
-        }
-
-        // Decrypt sensitive data
-        const decryptedKYCData = {
-            panNumber: decrypt(user.kycData.panNumber),
-            aadhaarNumber: decrypt(user.kycData.aadhaarNumber),
-            submittedAt: user.kycData.submittedAt,
-            verifiedAt: user.kycData.verifiedAt,
-            rejectedAt: user.kycData.rejectedAt,
-            rejectionReason: user.kycData.rejectionReason
-        };
-
-        Logger.info(`KYC data retrieved and decrypted - User: ${userId}, Requested by: ${requestingUser}`);
+        Logger.info(`KYC data retrieved - User: ${userId}, Requested by: ${requestingUser}`);
 
         return successResponse(
             res,
             {
-                userId: user._id,
-                email: user.email,
-                kycStatus: user.kycStatus,
-                kycData: decryptedKYCData
+                userId: result.userId,
+                email: result.email,
+                kycStatus: result.kycStatus,
+                kycData: result.kycData
             },
             'KYC data retrieved successfully.',
             200
@@ -490,61 +478,62 @@ exports.getKYCData = async (req, res, next) => {
 };
 
 /**
- * @desc 9. User sets up Transaction PIN after KYC verification
- * @route POST /api/v1/auth/setup-transaction-pin
+ * @desc 10. User sets up 2FA PIN (Two-Factor Authentication)
+ * @route POST /api/v1/auth/setup-2fa-pin
  * @access Private (Logged in Customer only, after KYC is verified)
  */
-exports.setupTransactionPin = async (req, res, next) => {
+exports.setup2FAPIN = async (req, res, next) => {
     try {
-        const { transactionPin, otp } = req.body;
-        const user = await User.findById(req.user._id).select('+otp +otpExpires');
+        const { pin, otp } = req.body;
+        const user = await User.findById(req.user._id).select('+otp +otpExpires +transactionPin');
 
         if (user.kycStatus !== 'verified') {
-            Logger.warn(`PIN setup attempted without verified KYC: ${user.email}`);
-            return errorResponse(res, null, 403, 'Your KYC must be verified before setting up Transaction PIN.');
+            Logger.warn(`2FA PIN setup attempted without verified KYC: ${user.email}`);
+            return errorResponse(res, null, 403, 'Your KYC must be verified before setting up 2FA PIN.');
         }
 
         if (user.transactionPin) {
-            Logger.warn(`PIN setup attempted but PIN already exists: ${user.email}`);
-            return errorResponse(res, null, 409, 'Transaction PIN already set. Please use change PIN option.');
+            Logger.warn(`2FA PIN setup attempted but PIN already exists: ${user.email}`);
+            return errorResponse(res, null, 409, '2FA PIN already set. Please use change PIN option.');
         }
 
         // Verify OTP
         const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
         if (user.otp !== hashedOTP || user.otpExpires < Date.now()) {
-            Logger.warn(`Invalid OTP attempt during PIN setup: ${user.email}`);
+            Logger.warn(`Invalid OTP attempt during 2FA PIN setup: ${user.email}`);
             return errorResponse(res, null, 400, 'Invalid or expired OTP.');
         }
 
-        // Set Transaction PIN
-        user.transactionPin = transactionPin;
+        // Set 2FA PIN
+        user.transactionPin = pin;
+        user.twoFactorEnabled = true;
         user.otp = undefined;
         user.otpExpires = undefined;
         await user.save({ validateBeforeSave: false });
 
-        Logger.info(`Transaction PIN setup completed for: ${user.email}`);
+        Logger.info(`2FA PIN setup completed for: ${user.email}`);
 
         return successResponse(
             res,
             null,
-            'Transaction PIN set successfully. You can now perform transfers.',
+            '2FA PIN set successfully. You can now use two-factor authentication for login.',
             201
         );
     } catch (err) {
-        Logger.error(`PIN setup error: ${err.message}`);
+        Logger.error(`2FA PIN setup error: ${err.message}`);
         next(err);
     }
 };
 
 /**
- * @desc 10. User changes their password
+ * @desc 11. User changes their password
  * @route PATCH /api/v1/auth/change-password
  * @access Private (Logged in users only)
  */
 exports.changePassword = async (req, res, next) => {
     try {
-        const { currentPassword, newPassword, otp } = req.body;
-        const user = await User.findById(req.user._id).select('+password +otp +otpExpires');
+        const { currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.user._id).select('+password');
 
         if (!user) {
             Logger.warn(`Password change attempted for non-existent user: ${req.user._id}`);
@@ -558,17 +547,8 @@ exports.changePassword = async (req, res, next) => {
             return errorResponse(res, null, 401, 'Current password is incorrect.');
         }
 
-        // Verify OTP
-        const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
-        if (user.otp !== hashedOTP || user.otpExpires < Date.now()) {
-            Logger.warn(`Invalid OTP attempt during password change: ${user.email}`);
-            return errorResponse(res, null, 400, 'Invalid or expired OTP.');
-        }
-
         // Update password
         user.password = newPassword;
-        user.otp = undefined;
-        user.otpExpires = undefined;
         await user.save({ validateBeforeSave: false });
 
         Logger.info(`Password changed successfully for: ${user.email}`);
@@ -586,7 +566,7 @@ exports.changePassword = async (req, res, next) => {
 };
 
 /**
- * @desc 11. User requests password reset (Forgot Password - Step 1)
+ * @desc 12. User requests password reset (Forgot Password)
  * @route POST /api/v1/auth/forgot-password
  * @access Public
  */
@@ -606,14 +586,15 @@ exports.forgotPassword = async (req, res, next) => {
         user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes validity
         await user.save({ validateBeforeSave: false });
 
-        // Send OTP via email
-        await emailService.sendOTPEmail(user.email, otp, user._id, 'password reset');
-        Logger.info(`Password reset OTP sent to: ${user.email}`);
+        Logger.info(`Password reset OTP generated for: ${user.email}`);
 
         return successResponse(
             res,
-            { email: user.email },
-            'Password reset OTP sent to your email. Please verify with OTP.',
+            { 
+                email: user.email,
+                otp: otp // Return OTP for frontend display
+            },
+            'Password reset OTP generated. Please verify with OTP.',
             200
         );
     } catch (err) {
@@ -623,7 +604,7 @@ exports.forgotPassword = async (req, res, next) => {
 };
 
 /**
- * @desc 12. User resets password with OTP (Forgot Password - Step 2)
+ * @desc 13. User resets password with OTP
  * @route PATCH /api/v1/auth/reset-password
  * @access Public
  */
@@ -665,136 +646,75 @@ exports.resetPassword = async (req, res, next) => {
 };
 
 /**
- * @desc 13. User changes Transaction PIN
- * @route PATCH /api/v1/auth/change-transaction-pin
- * @access Private (Logged in users with existing PIN only)
+ * @desc 14. User changes 2FA PIN
+ * @route PATCH /api/v1/auth/change-2fa-pin
+ * @access Private (Logged in users with 2FA enabled only)
  */
-exports.changeTransactionPin = async (req, res, next) => {
+exports.change2FAPIN = async (req, res, next) => {
     try {
-        const { currentPin, newPin, otp } = req.body;
-        const user = await User.findById(req.user._id).select('+transactionPin +otp +otpExpires');
+        const { currentPin, newPin } = req.body;
+        const user = await User.findById(req.user._id).select('+transactionPin');
 
-        if (!user || !user.transactionPin) {
-            Logger.warn(`PIN change attempted without existing PIN: ${req.user._id}`);
-            return errorResponse(res, null, 403, 'Transaction PIN not set. Please set up PIN first.');
+        if (!user || !user.transactionPin || !user.twoFactorEnabled) {
+            Logger.warn(`2FA PIN change attempted without existing PIN: ${req.user._id}`);
+            return errorResponse(res, null, 403, '2FA not enabled. Please set up 2FA PIN first.');
         }
 
         // Verify current PIN
         const isPinCorrect = await user.correctPin(currentPin, user.transactionPin);
         if (!isPinCorrect) {
-            Logger.warn(`Invalid current PIN during PIN change: ${user.email}`);
+            Logger.warn(`Invalid current PIN during 2FA change: ${user.email}`);
             return errorResponse(res, null, 401, 'Current PIN is incorrect.');
         }
 
-        // Verify OTP
-        const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
-        if (user.otp !== hashedOTP || user.otpExpires < Date.now()) {
-            Logger.warn(`Invalid OTP during PIN change: ${user.email}`);
-            return errorResponse(res, null, 400, 'Invalid or expired OTP.');
-        }
-
         // Update PIN
         user.transactionPin = newPin;
-        user.otp = undefined;
-        user.otpExpires = undefined;
         user.transactionPinAttempts = 0;
         await user.save({ validateBeforeSave: false });
 
-        Logger.info(`Transaction PIN changed successfully for: ${user.email}`);
+        Logger.info(`2FA PIN changed successfully for: ${user.email}`);
 
         return successResponse(
             res,
             null,
-            'Transaction PIN changed successfully.',
+            '2FA PIN changed successfully.',
             200
         );
     } catch (err) {
-        Logger.error(`PIN change error: ${err.message}`);
+        Logger.error(`2FA PIN change error: ${err.message}`);
         next(err);
     }
 };
 
 /**
- * @desc 14. User requests Transaction PIN reset (Forgot PIN - Step 1)
- * @route POST /api/v1/auth/forgot-transaction-pin
- * @access Public
+ * @desc 15. User disables 2FA
+ * @route PATCH /api/v1/auth/disable-2fa
+ * @access Private (Logged in users only)
  */
-exports.forgotTransactionPin = async (req, res, next) => {
+exports.disable2FA = async (req, res, next) => {
     try {
-        const { email } = req.body;
-        const user = await User.findOne({ email });
+        const user = await User.findById(req.user._id).select('+transactionPin');
 
-        if (!user) {
-            Logger.warn(`Forgot PIN attempt for non-existent email: ${email}`);
-            return errorResponse(res, null, 404, 'User not found with this email address.');
+        if (!user.twoFactorEnabled) {
+            Logger.warn(`2FA disable attempted but not enabled: ${user.email}`);
+            return errorResponse(res, null, 403, '2FA is not enabled for this account.');
         }
 
-        if (!user.transactionPin) {
-            Logger.warn(`Forgot PIN attempted but no PIN exists: ${user.email}`);
-            return errorResponse(res, null, 403, 'No Transaction PIN set. Please set up PIN first.');
-        }
-
-        // Generate OTP for PIN reset
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        user.otp = crypto.createHash('sha256').update(otp).digest('hex');
-        user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes validity
-        await user.save({ validateBeforeSave: false });
-
-        // Send OTP via email
-        await emailService.sendOTPEmail(user.email, otp, user._id, 'PIN reset');
-        Logger.info(`PIN reset OTP sent to: ${user.email}`);
-
-        return successResponse(
-            res,
-            { email: user.email },
-            'PIN reset OTP sent to your email. Please verify with OTP.',
-            200
-        );
-    } catch (err) {
-        Logger.error(`Forgot PIN error: ${err.message}`);
-        next(err);
-    }
-};
-
-/**
- * @desc 15. User resets Transaction PIN with OTP (Forgot PIN - Step 2)
- * @route PATCH /api/v1/auth/reset-transaction-pin
- * @access Public
- */
-exports.resetTransactionPin = async (req, res, next) => {
-    try {
-        const { email, otp, newPin } = req.body;
-        const user = await User.findOne({ email }).select('+otp +otpExpires');
-
-        if (!user) {
-            Logger.warn(`PIN reset attempted for non-existent email: ${email}`);
-            return errorResponse(res, null, 404, 'User not found.');
-        }
-
-        // Verify OTP
-        const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
-        if (user.otp !== hashedOTP || user.otpExpires < Date.now()) {
-            Logger.warn(`Invalid OTP during PIN reset: ${user.email}`);
-            return errorResponse(res, null, 400, 'Invalid or expired OTP.');
-        }
-
-        // Update PIN
-        user.transactionPin = newPin;
-        user.otp = undefined;
-        user.otpExpires = undefined;
+        user.transactionPin = undefined;
+        user.twoFactorEnabled = false;
         user.transactionPinAttempts = 0;
         await user.save({ validateBeforeSave: false });
 
-        Logger.info(`Transaction PIN reset successfully for: ${user.email}`);
+        Logger.info(`2FA disabled for: ${user.email}`);
 
         return successResponse(
             res,
             null,
-            'Transaction PIN reset successfully. You can now use your new PIN for transfers.',
+            '2FA disabled successfully.',
             200
         );
     } catch (err) {
-        Logger.error(`Reset PIN error: ${err.message}`);
+        Logger.error(`2FA disable error: ${err.message}`);
         next(err);
     }
 };

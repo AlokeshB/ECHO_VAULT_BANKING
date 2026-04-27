@@ -48,6 +48,17 @@ router.post(
 );
 
 /**
+ * @route POST /api/v1/auth/verify-2fa-pin
+ * @desc Verify 2FA PIN during login
+ * @access Private - requires token from email/userID login
+ */
+router.post(
+    '/verify-2fa-pin',
+    authMiddleware.protect,
+    authController.verify2FAPIN
+);
+
+/**
  * @route POST /api/v1/auth/create-support
  * @desc Admin creates support user
  * @access Private - Admin only
@@ -100,21 +111,32 @@ router.patch(
 );
 
 /**
- * @route POST /api/v1/auth/setup-transaction-pin
- * @desc User sets up Transaction PIN after KYC verification
+ * @route GET /api/v1/auth/kyc-data/:userId
+ * @desc Get decrypted KYC data (Admin or User for self)
+ * @access Private - Admin or account owner
+ */
+router.get(
+    '/kyc-data/:userId',
+    authMiddleware.protect,
+    authController.getKYCData
+);
+
+/**
+ * @route POST /api/v1/auth/setup-2fa-pin
+ * @desc User sets up 2FA PIN after KYC verification
  * @access Private - Customer only (after KYC verified)
  */
 router.post(
-    '/setup-transaction-pin',
+    '/setup-2fa-pin',
     authMiddleware.protect,
     authMiddleware.restrictTo('customer'),
-    validate('setupTransactionPin'),
-    authController.setupTransactionPin
+    validate('setup2FAPIN'),
+    authController.setup2FAPIN
 );
 
 /**
  * @route PATCH /api/v1/auth/change-password
- * @desc Change password with OTP verification
+ * @desc Change password
  * @access Private
  */
 router.patch(
@@ -149,50 +171,26 @@ router.patch(
 );
 
 /**
- * @route PATCH /api/v1/auth/change-transaction-pin
- * @desc Change Transaction PIN with OTP verification
- * @access Private
+ * @route PATCH /api/v1/auth/change-2fa-pin
+ * @desc Change 2FA PIN
+ * @access Private - users with 2FA enabled
  */
 router.patch(
-    '/change-transaction-pin',
+    '/change-2fa-pin',
     authMiddleware.protect,
-    validate('changeTransactionPin'),
-    authController.changeTransactionPin
+    validate('change2FAPIN'),
+    authController.change2FAPIN
 );
 
 /**
- * @route POST /api/v1/auth/forgot-transaction-pin
- * @desc Request Transaction PIN reset OTP
- * @access Public
- */
-router.post(
-    '/forgot-transaction-pin',
-    authRateLimiter,
-    validate('forgotTransactionPin'),
-    authController.forgotTransactionPin
-);
-
-/**
- * @route PATCH /api/v1/auth/reset-transaction-pin
- * @desc Reset Transaction PIN with OTP
- * @access Public
+ * @route PATCH /api/v1/auth/disable-2fa
+ * @desc Disable 2FA authentication
+ * @access Private - logged in users
  */
 router.patch(
-    '/reset-transaction-pin',
-    authRateLimiter,
-    validate('resetTransactionPin'),
-    authController.resetTransactionPin
-);
-
-/**
- * @route GET /api/v1/auth/kyc-data/:userId
- * @desc Get decrypted KYC data (Admin or User for self)
- * @access Private - Admin or account owner
- */
-router.get(
-    '/kyc-data/:userId',
+    '/disable-2fa',
     authMiddleware.protect,
-    authController.getKYCData
+    authController.disable2FA
 );
 
 module.exports = router;
