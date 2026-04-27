@@ -8,7 +8,6 @@ const Account = require('../models/Account');
 const User = require('../models/User');
 const Logger = require('../utils/logger');
 const notificationService = require('./notification.service');
-const emailService = require('./email.service');
 
 /**
  * @desc Orchestrates the transfer process: KYC checks, limits, fees, and then calls the Ledger Service
@@ -37,6 +36,8 @@ exports.initiateTransfer = async(userId, senderAccountNumber, receiverAccountNum
     }
     try{
         const completedTx = await LedgerService.executeInternalTransfer(senderAccount._id, receiverAccount._id, amount, description, auditContext);
+        
+        // Send in-app notification only
         await notificationService.sendNotification({
             userId,
             action: 'TRANSFER_SUCCESS',
@@ -46,21 +47,13 @@ exports.initiateTransfer = async(userId, senderAccountNumber, receiverAccountNum
             details: { senderAccountNumber, receiverAccountNumber, amount, description },
             ...auditContext
         });
-        await emailService.sendEmail({
-            to: user.email,
-            subject: 'Transfer Successful',
-            text: `Your transfer of ${amount} to account ${receiverAccountNumber} has been processed successfully.\n\nDescription: ${description}\n\nThank you,\nVault Banking Team`,
-            userId,
-            action: 'TRANSFER_SUCCESS_EMAIL_SENT',
-            resource: 'transaction',
-            resourceId: completedTx._id,
-            details: { senderAccountNumber, receiverAccountNumber, amount, description },
-            ...auditContext
-        });
+        
         return completedTx;
     }
     catch(err){
         Logger.error(`Transfer failed: ${err.message}`, { userId, senderAccountNumber, receiverAccountNumber, amount, description, auditContext });
+        
+        // Send in-app notification only
         await notificationService.sendNotification({
             userId,
             action: 'TRANSFER_FAILED',
@@ -69,16 +62,7 @@ exports.initiateTransfer = async(userId, senderAccountNumber, receiverAccountNum
             details: { senderAccountNumber, receiverAccountNumber, amount, description, error: err.message },
             ...auditContext
         });
-        await emailService.sendEmail({
-            to: user.email,
-            subject: 'Transfer Failed',
-            text: `Your transfer of ${amount} to account ${receiverAccountNumber} could not be completed.\n\nReason: ${err.message}\n\nThank you,\nVault Banking Team`,
-            userId,
-            action: 'TRANSFER_FAILURE_EMAIL_SENT',
-            resource: 'transaction',
-            details: { senderAccountNumber, receiverAccountNumber, amount, description, error: err.message },
-            ...auditContext
-        });
+        
         throw err;
     }
 };
