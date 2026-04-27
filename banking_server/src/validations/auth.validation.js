@@ -142,11 +142,46 @@ const schemas = {
         }),
         confirmPassword: Joi.string().required().valid(Joi.ref('newPassword')).messages({
             'any.only': 'Password confirmation does not match'
+        })
+    }),
+
+    verify2FAPIN: Joi.object().keys({
+        pin: Joi.string().required().length(4).pattern(/^\d+$/).messages({
+            'string.empty': 'PIN is required',
+            'string.length': 'PIN must be exactly 4 digits',
+            'string.pattern.base': 'PIN must contain only digits'
+        })
+    }),
+
+    setup2FAPIN: Joi.object().keys({
+        pin: Joi.string().required().length(4).pattern(/^\d+$/).messages({
+            'string.empty': '2FA PIN is required',
+            'string.length': '2FA PIN must be exactly 4 digits',
+            'string.pattern.base': '2FA PIN must contain only digits'
+        }),
+        confirmPin: Joi.string().required().valid(Joi.ref('pin')).messages({
+            'any.only': 'PIN confirmation does not match'
         }),
         otp: Joi.string().required().length(6).pattern(/^\d+$/).messages({
             'string.empty': 'OTP is required',
             'string.length': 'OTP must be exactly 6 digits',
             'string.pattern.base': 'OTP must contain only numbers'
+        })
+    }),
+
+    change2FAPIN: Joi.object().keys({
+        currentPin: Joi.string().required().length(4).pattern(/^\d+$/).messages({
+            'string.empty': 'Current PIN is required',
+            'string.length': 'Current PIN must be exactly 4 digits',
+            'string.pattern.base': 'Current PIN must contain only digits'
+        }),
+        newPin: Joi.string().required().length(4).pattern(/^\d+$/).messages({
+            'string.empty': 'New PIN is required',
+            'string.length': 'New PIN must be exactly 4 digits',
+            'string.pattern.base': 'New PIN must contain only digits'
+        }),
+        confirmPin: Joi.string().required().valid(Joi.ref('newPin')).messages({
+            'any.only': 'PIN confirmation does not match'
         })
     }),
 
@@ -190,11 +225,6 @@ const schemas = {
         }),
         confirmPin: Joi.string().required().valid(Joi.ref('newPin')).messages({
             'any.only': 'PIN confirmation does not match'
-        }),
-        otp: Joi.string().required().length(6).pattern(/^\d+$/).messages({
-            'string.empty': 'OTP is required',
-            'string.length': 'OTP must be exactly 6 digits',
-            'string.pattern.base': 'OTP must contain only numbers'
         })
     }),
 
