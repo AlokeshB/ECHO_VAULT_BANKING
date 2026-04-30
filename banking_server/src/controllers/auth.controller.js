@@ -346,7 +346,8 @@ exports.createSupportUser = async (req, res, next) => {
  */
 exports.approveCustomerAccount = async (req, res, next) => {
     try {
-        const result = await adminActionsService.approveCustomerAccount(req.params.userId);
+        const { adminMessage } = req.body;
+        const result = await adminActionsService.approveCustomerAccount(req.params.userId, adminMessage);
         
         if (!result.success) {
             return errorResponse(res, null, 404, result.message);
@@ -715,6 +716,49 @@ exports.disable2FA = async (req, res, next) => {
         );
     } catch (err) {
         Logger.error(`2FA disable error: ${err.message}`);
+        next(err);
+    }
+};
+
+/**
+ * @desc 11. Admin gets all users with optional filters (for admin dashboard)
+ * @route GET /api/v1/auth/admin/users
+ * @access Private (Admin only)
+ * @query role, kycStatus, accountApprovalStatus
+ */
+exports.getAllUsers = async (req, res, next) => {
+    try {
+        // Extract filters from query parameters
+        const filters = {};
+        if (req.query.role) {
+            filters.role = req.query.role;
+        }
+        if (req.query.kycStatus) {
+            filters.kycStatus = req.query.kycStatus;
+        }
+        if (req.query.accountApprovalStatus) {
+            filters.accountApprovalStatus = req.query.accountApprovalStatus;
+        }
+
+        const result = await adminActionsService.getAllUsers(filters);
+        
+        if (!result.success) {
+            return errorResponse(res, null, 400, result.message);
+        }
+
+        Logger.info(`Retrieved ${result.users.length} users with filters: ${JSON.stringify(filters)}`);
+
+        return successResponse(
+            res,
+            {
+                totalUsers: result.users.length,
+                users: result.users
+            },
+            'Users retrieved successfully',
+            200
+        );
+    } catch (err) {
+        Logger.error(`Error retrieving users: ${err.message}`);
         next(err);
     }
 };

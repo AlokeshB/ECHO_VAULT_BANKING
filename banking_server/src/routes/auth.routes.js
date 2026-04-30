@@ -183,6 +183,19 @@ router.patch(
 );
 
 /**
+ * @route GET /api/v1/auth/admin/users
+ * @desc Admin gets all users with optional filters
+ * @access Private - Admin only
+ * @query role, kycStatus, accountApprovalStatus
+ */
+router.get(
+    '/admin/users',
+    authMiddleware.protect,
+    authMiddleware.restrictTo('admin'),
+    authController.getAllUsers
+);
+
+/**
  * @route PATCH /api/v1/auth/disable-2fa
  * @desc Disable 2FA authentication
  * @access Private - logged in users
