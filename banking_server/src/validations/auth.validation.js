@@ -81,8 +81,8 @@ const schemas = {
     }),
 
     approveAccount: Joi.object().keys({
-        userId: Joi.string().required().messages({
-            'string.empty': 'User ID is required'
+        adminMessage: Joi.string().optional().max(500).messages({
+            'string.max': 'Admin message cannot exceed 500 characters'
         })
     }),
 

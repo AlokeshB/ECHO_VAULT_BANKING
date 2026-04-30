@@ -22,4 +22,12 @@ if(process.env.NODE_ENV !== 'production') {
         )
     }));
 }
+
+// Stream interface for Morgan HTTP request logging
+logger.stream = {
+    write: (message) => {
+        logger.info(message.trim());
+    }
+};
+
 module.exports = logger;
