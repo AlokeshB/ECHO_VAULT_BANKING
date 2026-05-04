@@ -134,6 +134,11 @@ exports.loginWithEmail = async (req, res, next) => {
     try {
         const user = req.user;
         
+        // Reset login attempts on successful authentication
+        if (user.loginAttempts > 0) {
+            await user.resetLoginAttempts();
+        }
+        
         // Check if 2FA (PIN) is enabled
         if (user.twoFactorEnabled && user.transactionPin) {
             const token = generateToken(user._id);
@@ -198,6 +203,11 @@ exports.loginWithEmail = async (req, res, next) => {
 exports.loginWithUserID = async (req, res, next) => {
     try {
         const user = req.user;
+        
+        // Reset login attempts on successful authentication
+        if (user.loginAttempts > 0) {
+            await user.resetLoginAttempts();
+        }
         
         // Check if 2FA (PIN) is enabled
         if (user.twoFactorEnabled && user.transactionPin) {

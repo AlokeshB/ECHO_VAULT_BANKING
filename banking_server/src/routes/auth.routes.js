@@ -2,8 +2,9 @@ const express = require('express');
 const passport = require('passport');
 const authController = require('../controllers/auth.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
+const { checkLoginAttempts, authenticateWithAttempts } = require('../middlewares/login-attempt.middleware');
 const { validate } = require('../validations/auth.validation');
-const { authRateLimiter } = require('../config/secuirity');
+const { loginMediumLimiter, registerLimiter } = require('../config/secuirity');
 
 const router = express.Router();
 
@@ -12,14 +13,14 @@ const router = express.Router();
  * @desc User self-registration
  * @access Public
  */
-router.post('/register', authRateLimiter, validate('registerCustomer'), authController.registerCustomer);
+router.post('/register', registerLimiter, validate('registerCustomer'), authController.registerCustomer);
 
 /**
  * @route POST /api/v1/auth/verify-email
  * @desc Verify email with OTP
  * @access Public
  */
-router.post('/verify-email', authRateLimiter, validate('verifyEmail'), authController.verifyEmail);
+router.post('/verify-email', loginMediumLimiter, validate('verifyEmail'), authController.verifyEmail);
 
 /**
  * @route POST /api/v1/auth/login-email
@@ -28,9 +29,10 @@ router.post('/verify-email', authRateLimiter, validate('verifyEmail'), authContr
  */
 router.post(
     '/login-email',
-    authRateLimiter,
+    loginMediumLimiter,
+    checkLoginAttempts, // Check for account locks/OTP challenges
     validate('loginEmail'),
-    passport.authenticate('email-local', { session: false }),
+    authenticateWithAttempts('email-local', 'email'),
     authController.loginWithEmail
 );
 
@@ -41,9 +43,10 @@ router.post(
  */
 router.post(
     '/login-userid',
-    authRateLimiter,
+    loginMediumLimiter,
+    checkLoginAttempts, // Check for account locks/OTP challenges
     validate('loginUserID'),
-    passport.authenticate('userid-local', { session: false }),
+    authenticateWithAttempts('userid-local', 'userId'),
     authController.loginWithUserID
 );
 
@@ -153,7 +156,7 @@ router.patch(
  */
 router.post(
     '/forgot-password',
-    authRateLimiter,
+    loginMediumLimiter,
     validate('forgotPassword'),
     authController.forgotPassword
 );
@@ -165,7 +168,7 @@ router.post(
  */
 router.patch(
     '/reset-password',
-    authRateLimiter,
+    loginMediumLimiter,
     validate('resetPassword'),
     authController.resetPassword
 );
