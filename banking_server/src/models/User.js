@@ -67,7 +67,14 @@ const UserSchema = new mongoose.Schema({
     lockUntil: {
         type: Date
     },
-    // Transaction PIN Fields
+    lastFailedLoginAt: {
+        type: Date
+    },
+    loginAttemptWindow: {
+        type: Date,
+        default: () => new Date(Date.now() + 15 * 60 * 1000) // 15 minute window
+    },
+    // Transaction PIN Fields (6-digit PIN for 2FA)
     transactionPin: {
         type: String,
         select: false,
@@ -126,6 +133,89 @@ UserSchema.methods.incLoginAttempts = function () {
     }
     return this.updateOne({ $inc: { loginAttempts: 1 } }, { new: true });
 };
+
+/**
+ * @desc Record failed login attempt and apply tiered locks
+ * Stage 1 (5 attempts): Soft warning
+ * Stage 2 (8 attempts): OTP challenge required
+ * Stage 3 (12+ attempts): 5-15 minute lockout
+ */
+UserSchema.methods.recordFailedLogin = async function () {
+    const now = Date.now();
+    
+    // Reset attempts if window has expired
+    if (this.loginAttemptWindow && this.loginAttemptWindow < now) {
+        this.loginAttempts = 0;
+        this.loginAttemptWindow = new Date(now + 15 * 60 * 1000); // New 15-min window
+    }
+    
+    this.loginAttempts += 1;
+    this.lastFailedLoginAt = new Date(now);
+    
+    // Stage 3: Apply temporary lock after 12 attempts
+    if (this.loginAttempts >= 12) {
+        this.lockUntil = new Date(now + (10 * 60 * 1000)); // Lock for 10 minutes
+    }
+    
+    return await this.save({ validateBeforeSave: false });
+};
+
+/**
+ * @desc Reset login attempts on successful login
+ */
+UserSchema.methods.resetLoginAttempts = async function () {
+    this.loginAttempts = 0;
+    this.lastFailedLoginAt = undefined;
+    this.lockUntil = undefined;
+    return await this.save({ validateBeforeSave: false });
+};
+
+/**
+ * @desc Check if account is locked
+ * Stage 1 (5 attempts): warning only
+ * Stage 2 (8 attempts): OTP challenge required
+ * Stage 3 (12+ attempts): temporarily locked
+ */
+UserSchema.methods.checkLoginStatus = function () {
+    const now = Date.now();
+    
+    // Check hard lock (Stage 3)
+    if (this.lockUntil && this.lockUntil > now) {
+        return {
+            isLocked: true,
+            requiresOTP: false,
+            remainingMinutes: Math.ceil((this.lockUntil - now) / 60000),
+            attemptCount: this.loginAttempts
+        };
+    }
+    
+    // Check OTP requirement (Stage 2)
+    if (this.loginAttempts >= 8) {
+        return {
+            isLocked: false,
+            requiresOTP: true,
+            attemptCount: this.loginAttempts
+        };
+    }
+    
+    // Warning stage (Stage 1)
+    if (this.loginAttempts >= 5) {
+        return {
+            isLocked: false,
+            requiresOTP: false,
+            warning: true,
+            attemptCount: this.loginAttempts
+        };
+    }
+    
+    return {
+        isLocked: false,
+        requiresOTP: false,
+        warning: false,
+        attemptCount: this.loginAttempts
+    };
+};
+
 UserSchema.virtual('isLocked').get(function () {
     return !!(this.lockUntil && this.lockUntil > Date.now());
 });

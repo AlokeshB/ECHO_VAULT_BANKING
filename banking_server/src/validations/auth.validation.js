@@ -146,17 +146,17 @@ const schemas = {
     }),
 
     verify2FAPIN: Joi.object().keys({
-        pin: Joi.string().required().length(4).pattern(/^\d+$/).messages({
+        pin: Joi.string().required().length(6).pattern(/^\d+$/).messages({
             'string.empty': 'PIN is required',
-            'string.length': 'PIN must be exactly 4 digits',
+            'string.length': 'PIN must be exactly 6 digits',
             'string.pattern.base': 'PIN must contain only digits'
         })
     }),
 
     setup2FAPIN: Joi.object().keys({
-        pin: Joi.string().required().length(4).pattern(/^\d+$/).messages({
+        pin: Joi.string().required().length(6).pattern(/^\d+$/).messages({
             'string.empty': '2FA PIN is required',
-            'string.length': '2FA PIN must be exactly 4 digits',
+            'string.length': '2FA PIN must be exactly 6 digits',
             'string.pattern.base': '2FA PIN must contain only digits'
         }),
         confirmPin: Joi.string().required().valid(Joi.ref('pin')).messages({
@@ -170,14 +170,14 @@ const schemas = {
     }),
 
     change2FAPIN: Joi.object().keys({
-        currentPin: Joi.string().required().length(4).pattern(/^\d+$/).messages({
+        currentPin: Joi.string().required().length(6).pattern(/^\d+$/).messages({
             'string.empty': 'Current PIN is required',
-            'string.length': 'Current PIN must be exactly 4 digits',
+            'string.length': 'Current PIN must be exactly 6 digits',
             'string.pattern.base': 'Current PIN must contain only digits'
         }),
-        newPin: Joi.string().required().length(4).pattern(/^\d+$/).messages({
+        newPin: Joi.string().required().length(6).pattern(/^\d+$/).messages({
             'string.empty': 'New PIN is required',
-            'string.length': 'New PIN must be exactly 4 digits',
+            'string.length': 'New PIN must be exactly 6 digits',
             'string.pattern.base': 'New PIN must contain only digits'
         }),
         confirmPin: Joi.string().required().valid(Joi.ref('newPin')).messages({
