@@ -29,7 +29,7 @@ passport.use('email-local', new LocalStrategy({
             return done(null, false, { message: 'Your account is not approved yet. Please wait for admin approval' });
         }
         
-        const isPasswordValid = await user.matchPassword(password);
+        const isPasswordValid = await user.correctPassword(password, user.password);
         
         if (!isPasswordValid) {
             Logger.warn(`Failed login attempt for email: ${email}`);
@@ -71,7 +71,7 @@ passport.use('userid-local', new LocalStrategy({
             return done(null, false, { message: 'Your KYC must be verified before you can log in' });
         }
         
-        const isPasswordValid = await user.matchPassword(password);
+        const isPasswordValid = await user.correctPassword(password);
         
         if (!isPasswordValid) {
             Logger.warn(`Failed login attempt for UserID: ${userId}`);

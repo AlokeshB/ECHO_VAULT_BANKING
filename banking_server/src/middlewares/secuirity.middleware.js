@@ -262,9 +262,7 @@ exports.verifyRequestOrigin = (req, res, next) => {
     try {
         const origin = req.headers.origin || req.headers.referer;
         const allowedOrigins = [
-            process.env.CORS_ORIGIN || 'http://localhost:3000',
-            'http://localhost:3001',
-            'http://localhost:8000'
+            process.env.CORS_ORIGIN
         ];
 
         // Allow if no origin (e.g., REST client requests)
