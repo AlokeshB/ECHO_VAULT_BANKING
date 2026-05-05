@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const Logger = require('../utils/logger');
 const { errorResponse } = require('../utils/response');
-
+const passport = require('passport');
 /**
  * @desc Check if user account is locked due to failed login attempts
  * Uses layered approach:
