@@ -313,27 +313,35 @@ export const LoginPage = () => {
   }
 
   return (
-    <div className="login-page">
+    <div className="login-page" data-login-type={userType}>
       <Container className="d-flex align-items-center justify-content-center min-vh-100">
-        <Card className="login-card w-100" style={{ maxWidth: '450px' }}>
+        <Card className={`login-card login-card-${userType} w-100`} style={{ maxWidth: '450px' }}>
           <Card.Body>
-            <h2 className="mb-4 text-center">Login</h2>
+            <div className={`login-header login-header-${userType}`}>
+              <div className="login-icon">{userType === 'admin' ? '🔐' : '👤'}</div>
+              <h2 className="mb-2 text-center">
+                {userType === 'admin' ? 'Admin Portal' : 'Customer Login'}
+              </h2>
+              <p className="text-center login-subtitle">
+                {userType === 'admin' ? 'System Administration' : 'Secure Banking Access'}
+              </p>
+            </div>
 
             {/* User Type Toggle */}
             <div className="user-type-toggle mb-4 d-flex gap-2">
               <Button
                 variant={userType === 'customer' ? 'primary' : 'outline-primary'}
-                className="w-50"
+                className="w-50 toggle-btn toggle-customer"
                 onClick={() => setUserType('customer')}
               >
-                Customer
+                👤 Customer
               </Button>
               <Button
                 variant={userType === 'admin' ? 'primary' : 'outline-primary'}
-                className="w-50"
+                className="w-50 toggle-btn toggle-admin"
                 onClick={() => setUserType('admin')}
               >
-                Admin
+                🔐 Admin
               </Button>
             </div>
 
