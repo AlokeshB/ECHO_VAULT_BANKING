@@ -1,0 +1,14 @@
+.audit-logs {
+  background: var(--bs-light);
+  min-height: 100vh;
+}
+
+[data-bs-theme="dark"] .audit-logs {
+  background: #0d0d0d;
+}
+
+@media (max-width: 768px) {
+  .audit-logs {
+    padding: 1rem !important;
+  }
+}

@@ -1,0 +1,14 @@
+.user-management {
+  background: var(--bs-light);
+  min-height: 100vh;
+}
+
+[data-bs-theme="dark"] .user-management {
+  background: #0d0d0d;
+}
+
+@media (max-width: 768px) {
+  .user-management {
+    padding: 1rem !important;
+  }
+}
