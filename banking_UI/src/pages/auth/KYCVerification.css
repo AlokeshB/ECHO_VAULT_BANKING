@@ -1,0 +1,71 @@
+.kyc-page {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
+.kyc-card {
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: white;
+}
+
+.kyc-card h2 {
+  color: #333;
+  font-weight: 700;
+}
+
+.kyc-card h5 {
+  color: #333;
+  font-weight: 600;
+  margin-top: 1.5rem;
+}
+
+.kyc-card .form-control,
+.kyc-card .form-select {
+  border: 1px solid #ddd;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.kyc-card .form-control:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.kyc-card .btn-primary {
+  background-color: #667eea;
+  border-color: #667eea;
+  padding: 0.75rem;
+  font-weight: 600;
+}
+
+.kyc-card .btn-primary:hover,
+.kyc-card .btn-primary:focus {
+  background-color: #5568d3;
+  border-color: #5568d3;
+}
+
+.kyc-card .progress {
+  height: 6px;
+  background-color: #e9ecef;
+}
+
+.kyc-card .progress-bar {
+  background-color: #667eea;
+  transition: width 0.3s ease;
+}
+
+@media (max-width: 480px) {
+  .kyc-card {
+    margin: 1rem;
+  }
+
+  .kyc-page {
+    padding: 1rem 0;
+  }
+}

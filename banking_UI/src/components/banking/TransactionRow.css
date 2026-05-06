@@ -1,0 +1,58 @@
+.transaction-row {
+  transition: background-color 0.3s ease;
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+.transaction-row:hover {
+  background-color: var(--bs-light);
+}
+
+.transaction-icon {
+  text-align: center;
+  font-size: 1.25rem;
+  width: 50px;
+}
+
+.transaction-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.transaction-description {
+  font-weight: 500;
+  color: var(--bs-body-color);
+}
+
+.transaction-date {
+  white-space: nowrap;
+}
+
+.transaction-amount {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+[data-bs-theme="dark"] .transaction-row:hover {
+  background-color: #2a2a2a;
+}
+
+@media (max-width: 768px) {
+  .transaction-row {
+    display: block;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+  }
+
+  .transaction-row td {
+    display: block;
+    padding: 0.5rem 0 !important;
+    border: none;
+  }
+
+  .transaction-icon {
+    text-align: left;
+    width: auto;
+  }
+}
