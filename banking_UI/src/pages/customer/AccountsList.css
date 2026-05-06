@@ -1,0 +1,9 @@
+.accounts-list {
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .accounts-list {
+    padding: 1rem !important;
+  }
+}
