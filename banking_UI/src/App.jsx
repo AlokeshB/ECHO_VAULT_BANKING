@@ -1,122 +1,173 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAppSelector, useAppDispatch } from './hooks/useAppDispatch';
+import { NavigationBar } from './components/common/Navbar';
+import { Sidebar } from './components/common/Sidebar';
 
-function App() {
-  const [count, setCount] = useState(0)
+// Auth Pages
+import { LandingPage } from './pages/auth/LandingPage';
+import { LoginPage } from './pages/auth/LoginPage';
+import { RegisterPage } from './pages/auth/RegisterPage';
+import { KYCVerification } from './pages/auth/KYCVerification';
+import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
+
+// Customer Pages
+import { Dashboard } from './pages/customer/Dashboard';
+import { AccountsList } from './pages/customer/AccountsList';
+import { TransactionHistory } from './pages/customer/TransactionHistory';
+import { TransferFunds } from './pages/customer/TransferFunds';
+
+// Admin Pages
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { UserManagement } from './pages/admin/UserManagement';
+import { AuditLogs } from './pages/admin/AuditLogs';
+
+// Protected Route Component
+const ProtectedRoute = ({ children, requiredRole = null, requireKYC = false }) => {
+  const { isAuthenticated, kycVerified, role } = useAppSelector((state) => state.auth);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  if (requiredRole && role !== requiredRole) {
+    return <Navigate to="/" />;
+  }
+
+  if (requireKYC && !kycVerified) {
+    return <Navigate to="/kyc-verify" />;
+  }
+
+  return children;
+};
+
+// Layout Component
+const AppLayout = ({ children }) => {
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+
+  if (!isAuthenticated) {
+    return children;
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app-layout">
+      <NavigationBar />
+      <div className="app-body">
+        <Sidebar />
+        <main className="app-content">{children}</main>
+      </div>
+    </div>
+  );
+};
 
-      <div className="ticks"></div>
+function App() {
+  const { isAuthenticated, token, role } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+  useEffect(() => {
+    // Check if token exists in localStorage on app load
+    const storedToken = localStorage.getItem('authToken');
+    if (storedToken && !token) {
+      // You might want to validate the token here
+    }
+  }, [token, dispatch]);
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+  return (
+    <AppLayout>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        {/* KYC Verification (requires auth) */}
+        <Route
+          path="/kyc-verify"
+          element={
+            <ProtectedRoute>
+              <KYCVerification />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Customer Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute requiredRole="customer" requireKYC={true}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/accounts"
+          element={
+            <ProtectedRoute requiredRole="customer" requireKYC={true}>
+              <AccountsList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/transactions"
+          element={
+            <ProtectedRoute requiredRole="customer" requireKYC={true}>
+              <TransactionHistory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/transfer"
+          element={
+            <ProtectedRoute requiredRole="customer" requireKYC={true}>
+              <TransferFunds />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin Routes */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <UserManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/audit-logs"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AuditLogs />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Catch All - Redirect based on auth status and role */}
+        <Route
+          path="*"
+          element={
+            isAuthenticated ? (
+              <Navigate to={role === 'admin' ? '/admin/dashboard' : '/dashboard'} />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+      </Routes>
+    </AppLayout>
+  );
 }
 
-export default App
+export default App;
+
