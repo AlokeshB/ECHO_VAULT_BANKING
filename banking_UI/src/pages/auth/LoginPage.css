@@ -1,0 +1,74 @@
+.login-page {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-card {
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: white;
+}
+
+.login-card h2,
+.login-card h3 {
+  color: #333;
+  font-weight: 700;
+}
+
+.login-card .form-control,
+.login-card .form-select {
+  border: 1px solid #ddd;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.login-card .form-control:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.login-card .btn-primary {
+  background-color: #667eea;
+  border-color: #667eea;
+  padding: 0.75rem;
+  font-weight: 600;
+}
+
+.login-card .btn-primary:hover {
+  background-color: #5568d3;
+  border-color: #5568d3;
+}
+
+.login-card .nav-tabs {
+  border-bottom: 1px solid #ddd;
+}
+
+.login-card .nav-link {
+  color: #666;
+  border: none;
+  cursor: pointer;
+}
+
+.login-card .nav-link.active {
+  color: #667eea;
+  border-bottom: 2px solid #667eea;
+  background: none;
+}
+
+.login-card a {
+  color: #667eea;
+}
+
+.login-card a:hover {
+  color: #5568d3;
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    margin: 1rem;
+  }
+}
