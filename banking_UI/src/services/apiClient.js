@@ -24,9 +24,17 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle token refresh
+// Response interceptor to handle token refresh and data extraction
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Extract nested data from standard API response structure
+    // API returns: { success, message, data: {...} }
+    // Transform to return just the data object
+    if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+      response.data = response.data.data;
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 

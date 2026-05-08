@@ -5,7 +5,7 @@ import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { setLoading, setError } from '../../store/slices/apiStateSlice';
 import { register } from '../../services/auth.service';
 import { validateInputField, getValidationError } from '../../utils/validator';
-import './RegisterPage.css';
+
 
 export const RegisterPage = () => {
   const navigate = useNavigate();

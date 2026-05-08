@@ -18,15 +18,9 @@ export const loginWithUserId = async (userId, password) => {
   return response.data;
 };
 
-// Generate mPIN
-export const generateMPin = async (userId) => {
-  const response = await apiClient.post('/auth/generate-mpin', { userId });
-  return response.data;
-};
-
-// Verify mPIN for 2FA
-export const verifyMPin = async (userId, mPin) => {
-  const response = await apiClient.post('/auth/verify-mpin', { userId, mPin });
+// Verify 2FA PIN during login
+export const verify2FAPIN = async (pin) => {
+  const response = await apiClient.post('/auth/verify-2fa-pin', { pin });
   return response.data;
 };
 
@@ -100,5 +94,26 @@ export const resetPassword = async (email, otp, newPassword) => {
     otp,
     newPassword,
   });
+  return response.data;
+};
+
+// Setup 2FA PIN
+export const setup2FAPIN = async (pin, otp) => {
+  const response = await apiClient.post('/auth/setup-2fa-pin', { pin, otp });
+  return response.data;
+};
+
+// Change 2FA PIN
+export const change2FAPIN = async (currentPin, newPin) => {
+  const response = await apiClient.patch('/auth/change-2fa-pin', {
+    currentPin,
+    newPin,
+  });
+  return response.data;
+};
+
+// Disable 2FA
+export const disable2FA = async () => {
+  const response = await apiClient.patch('/auth/disable-2fa');
   return response.data;
 };

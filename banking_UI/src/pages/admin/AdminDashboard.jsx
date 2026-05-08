@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, Spinner, Alert } from 'react-bootstrap';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { getDashboardMetrics } from '../../services/admin.service';
-import './AdminDashboard.css';
+
 
 export const AdminDashboard = () => {
   const { role } = useAppSelector((state) => state.auth);

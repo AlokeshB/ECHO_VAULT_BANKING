@@ -6,7 +6,7 @@ import { setKycVerified } from '../../store/slices/authSlice';
 import { setLoading, setError } from '../../store/slices/apiStateSlice';
 import { submitKYC } from '../../services/auth.service';
 import { validateInputField, getValidationError } from '../../utils/validator';
-import './KYCVerification.css';
+
 
 export const KYCVerification = () => {
   const navigate = useNavigate();

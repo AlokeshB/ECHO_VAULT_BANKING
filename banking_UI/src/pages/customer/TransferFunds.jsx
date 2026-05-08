@@ -4,7 +4,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks/useAppDispatch';
 import { completeTransfer, failTransfer } from '../../store/slices/transactionSlice';
 import { TransferForm } from '../../components/banking/TransferForm';
 import { initiateTransfer as initiateTransferAPI } from '../../services/transaction.service';
-import './TransferFunds.css';
+
 
 export const TransferFunds = () => {
   const dispatch = useAppDispatch();
