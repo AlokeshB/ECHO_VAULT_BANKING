@@ -1,9 +1,0 @@
-.transaction-history {
-  min-height: 100vh;
-}
-
-@media (max-width: 768px) {
-  .transaction-history {
-    padding: 1rem !important;
-  }
-}

@@ -3,7 +3,7 @@ import { Nav, Offcanvas } from 'react-bootstrap';
 import { FiMenu, FiHome, FiDollarSign, FiBarChart, FiSettings, FiUsers } from 'react-icons/fi';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { useLayout } from '../../context/LayoutContext';
-import './Sidebar.css';
+
 
 export const Sidebar = () => {
   const [show, setShow] = useState(false);

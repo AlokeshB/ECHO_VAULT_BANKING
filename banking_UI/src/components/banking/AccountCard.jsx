@@ -2,7 +2,7 @@ import { Card } from 'react-bootstrap';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { useState } from 'react';
 import { formatCurrencyWithSymbol } from '../../utils/currencyFormatter';
-import './AccountCard.css';
+
 
 export const AccountCard = ({ account, isSelected, onSelect }) => {
   const [showBalance, setShowBalance] = useState(true);

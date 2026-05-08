@@ -4,7 +4,7 @@ import { FiLogOut, FiSettings, FiUser } from 'react-icons/fi';
 import { useAppDispatch, useAppSelector } from '../../hooks/useAppDispatch';
 import { logout } from '../../store/slices/authSlice';
 import { useTheme } from '../../hooks/useTheme';
-import './Navbar.css';
+
 
 export const NavigationBar = () => {
   const dispatch = useAppDispatch();

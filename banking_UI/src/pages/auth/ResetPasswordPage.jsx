@@ -3,7 +3,6 @@ import { Container, Form, Button, Card, Alert } from 'react-bootstrap';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { resetPassword } from '../../services/auth.service';
 import { validateInputField } from '../../utils/validator';
-import './ResetPasswordPage.css';
 
 export const ResetPasswordPage = () => {
   const navigate = useNavigate();

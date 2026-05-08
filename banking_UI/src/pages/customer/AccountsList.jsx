@@ -5,7 +5,7 @@ import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { setAccounts, selectAccount } from '../../store/slices/accountSlice';
 import { getAccounts } from '../../services/account.service';
 import { AccountCard } from '../../components/banking/AccountCard';
-import './AccountsList.css';
+
 
 export const AccountsList = () => {
   const dispatch = useAppDispatch();

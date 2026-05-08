@@ -2,11 +2,10 @@ import { useState } from 'react';
 import { Container, Form, Button, Card, Tabs, Tab, Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
-import { setAuth, setTwoFactorRequired, setMPinSet } from '../../store/slices/authSlice';
+import { setAuth, setTwoFactorRequired } from '../../store/slices/authSlice';
 import { setLoading, setError } from '../../store/slices/apiStateSlice';
-import { loginWithEmail, loginWithUserId, generateMPin, verifyMPin } from '../../services/auth.service';
+import { loginWithEmail, loginWithUserId, verify2FAPIN } from '../../services/auth.service';
 import { validateInputField, getValidationError } from '../../utils/validator';
-import './LoginPage.css';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -23,8 +22,7 @@ export const LoginPage = () => {
 
   // 2FA state
   const [twoFACode, setTwoFACode] = useState('');
-  const [mPinCode, setMPinCode] = useState('');
-  const [loginStage, setLoginStage] = useState('credentials'); // 'credentials', '2fa', 'mpin'
+  const [loginStage, setLoginStage] = useState('credentials'); // 'credentials' or '2fa'
   const [tempUserId, setTempUserId] = useState(null);
 
   const handleEmailChange = (e) => {
@@ -92,18 +90,21 @@ export const LoginPage = () => {
         response = await loginWithUserId(userIdLogin.userId, userIdLogin.password);
       }
 
-      if (response.requiresMPin) {
-        // Generate mPin
-        const mPinResponse = await generateMPin(response.userId || userIdLogin.userId);
-        setTempUserId(response.userId || userIdLogin.userId);
-        setLoginStage('mpin');
-        setMPinSet(true);
-      } else if (response.requires2FA) {
-        setTempUserId(response.userId);
+      if (!response) {
+        throw new Error('Invalid server response');
+      }
+
+      // Check if 2FA is required
+      if (response.twoFactorRequired) {
+        setTempUserId(response.user?.id);
         setLoginStage('2fa');
         dispatch(setTwoFactorRequired(true));
-      } else {
-        // Login successful
+      } else if (response.user) {
+        // Login successful - user object exists
+        if (!response.user.role) {
+          throw new Error('User role not found in response');
+        }
+
         dispatch(
           setAuth({
             token: response.token,
@@ -119,6 +120,8 @@ export const LoginPage = () => {
         } else {
           navigate(response.user.kycVerified ? '/dashboard' : '/kyc-verify');
         }
+      } else {
+        throw new Error('Invalid login response structure');
       }
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.message || 'Login failed';
@@ -134,14 +137,18 @@ export const LoginPage = () => {
     e.preventDefault();
 
     if (!twoFACode || twoFACode.length !== 6) {
-      setErrors({ twoFACode: '2FA code must be 6 digits' });
+      setErrors({ twoFACode: '2FA PIN must be 6 digits' });
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await verifyMPin(tempUserId, twoFACode);
+      const response = await verify2FAPIN(twoFACode);
       
+      if (!response || !response.user || !response.user.role) {
+        throw new Error('Invalid 2FA PIN verification response');
+      }
+
       dispatch(
         setAuth({
           token: response.token,
@@ -158,7 +165,8 @@ export const LoginPage = () => {
         navigate(response.user.kycVerified ? '/dashboard' : '/kyc-verify');
       }
     } catch (error) {
-      setApiError(error.response?.data?.message || 'Verification failed');
+      const errorMsg = error.response?.data?.message || error.message || '2FA verification failed';
+      setApiError(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -176,6 +184,10 @@ export const LoginPage = () => {
     try {
       const response = await verifyMPin(tempUserId, mPinCode);
       
+      if (!response || !response.user || !response.user.role) {
+        throw new Error('Invalid mPin verification response');
+      }
+
       dispatch(
         setAuth({
           token: response.token,
@@ -192,7 +204,8 @@ export const LoginPage = () => {
         navigate(response.user.kycVerified ? '/dashboard' : '/kyc-verify');
       }
     } catch (error) {
-      setApiError(error.response?.data?.message || 'Verification failed');
+      const errorMsg = error.response?.data?.message || error.message || 'Verification failed';
+      setApiError(errorMsg);
     } finally {
       setIsLoading(false);
     }

@@ -3,7 +3,7 @@ import { Form, Button, Container } from 'react-bootstrap';
 import { validateInputField, getValidationError } from '../../utils/validator';
 import { useAppDispatch, useAppSelector } from '../../hooks/useAppDispatch';
 import { initiateTransfer, setTransferError } from '../../store/slices/transactionSlice';
-import './TransferForm.css';
+
 
 export const TransferForm = ({ onSubmit }) => {
   const dispatch = useAppDispatch();

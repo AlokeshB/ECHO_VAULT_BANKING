@@ -4,7 +4,7 @@ import { useAppDispatch, useAppSelector } from '../../hooks/useAppDispatch';
 import { setTransactions } from '../../store/slices/transactionSlice';
 import { getTransactionHistory } from '../../services/transaction.service';
 import { TransactionRow } from '../../components/banking/TransactionRow';
-import './TransactionHistory.css';
+
 
 export const TransactionHistory = () => {
   const dispatch = useAppDispatch();

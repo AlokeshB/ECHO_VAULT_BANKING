@@ -10,7 +10,7 @@ import { getTransactions } from '../../services/transaction.service';
 import { AccountCard } from '../../components/banking/AccountCard';
 import { TransactionRow } from '../../components/banking/TransactionRow';
 import { formatCurrencyWithSymbol } from '../../utils/currencyFormatter';
-import './Dashboard.css';
+
 
 export const Dashboard = () => {
   const navigate = useNavigate();

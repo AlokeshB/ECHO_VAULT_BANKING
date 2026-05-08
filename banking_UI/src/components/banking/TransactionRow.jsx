@@ -2,7 +2,7 @@ import { formatCurrencyWithSymbol } from '../../utils/currencyFormatter';
 import { formatDateTime } from '../../utils/dateFormatter';
 import { Badge } from 'react-bootstrap';
 import { FiArrowDown, FiArrowUp, FiArrowRight } from 'react-icons/fi';
-import './TransactionRow.css';
+
 
 export const TransactionRow = ({ transaction }) => {
   const isDebit = transaction.type === 'debit' || transaction.type === 'transfer_out';

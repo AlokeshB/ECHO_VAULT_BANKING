@@ -1,7 +1,7 @@
 import { Container, Row, Col, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/useAppSelector';
-import './LandingPage.css';
+
 
 export const LandingPage = () => {
   const navigate = useNavigate();

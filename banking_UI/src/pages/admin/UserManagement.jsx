@@ -3,7 +3,7 @@ import { Container, Row, Col, Card, Table, Button, Form, Spinner, Alert, Modal }
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { getAllUsers, toggleUserStatus } from '../../services/admin.service';
 import { formatDateTime } from '../../utils/dateFormatter';
-import './UserManagement.css';
+
 
 export const UserManagement = () => {
   const { role } = useAppSelector((state) => state.auth);
