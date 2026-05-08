@@ -3,10 +3,7 @@ const mongoose = require('mongoose');
 const User = require('./src/models/User');
 const seedAdmin = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
+        await mongoose.connect(process.env.DB_URI);
         console.log('MongoDB Connected for seeding admin user');
         const existingUser = await User.findOne({ email: 'admin@echovault.com' });
         if (existingUser) {
@@ -30,7 +27,7 @@ const seedAdmin = async () => {
         adminUser.kycData.verifiedAt = Date.now();
         await adminUser.save();
         console.log('Admin user seeded successfully');
-        process.exit(0);
+        // process.exit(0);
     }
     catch (err) {
         console.error('Error seeding admin user:', err);
@@ -38,3 +35,5 @@ const seedAdmin = async () => {
     }
 
 };
+
+seedAdmin();
