@@ -5,7 +5,7 @@ import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { setAuth, setTwoFactorRequired } from '../../store/slices/authSlice';
 import { setLoading, setError } from '../../store/slices/apiStateSlice';
 import { loginWithEmail, loginWithUserId, verify2FAPIN } from '../../services/auth.service';
-import { validateInputField, getValidationError } from '../../utils/validator';
+import { validateInputField } from '../../utils/validator';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -172,45 +172,6 @@ export const LoginPage = () => {
     }
   };
 
-  const handleVerifyMPin = async (e) => {
-    e.preventDefault();
-
-    if (!mPinCode || mPinCode.length !== 4) {
-      setErrors({ mPinCode: 'mPin must be 4 digits' });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const response = await verifyMPin(tempUserId, mPinCode);
-      
-      if (!response || !response.user || !response.user.role) {
-        throw new Error('Invalid mPin verification response');
-      }
-
-      dispatch(
-        setAuth({
-          token: response.token,
-          refreshToken: response.refreshToken,
-          user: response.user,
-          role: response.user.role,
-        })
-      );
-      
-      // Redirect based on user role
-      if (response.user.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate(response.user.kycVerified ? '/dashboard' : '/kyc-verify');
-      }
-    } catch (error) {
-      const errorMsg = error.response?.data?.message || error.message || 'Verification failed';
-      setApiError(errorMsg);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   if (loginStage === '2fa') {
     return (
       <div className="login-page">
@@ -306,23 +267,6 @@ export const LoginPage = () => {
                 </Button>
               </Form>
 
-              <div className="text-center mt-3">
-                <Button
-                  variant="link"
-                  onClick={() => {
-                    setLoginStage('credentials');
-                    setMPinCode('');
-                    setApiError(null);
-                  }}
-                >
-                  Back to Login
-                </Button>
-              </div>
-            </Card.Body>
-          </Card>
-        </Container>
-      </div>
-    );
   }
 
   return (
