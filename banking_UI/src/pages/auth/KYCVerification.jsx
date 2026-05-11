@@ -105,7 +105,7 @@ export const KYCVerification = () => {
       dispatch(setLoading(true));
       
       const formDataToSend = new FormData();
-      formDataToSend.append('aadharNumber', kycData.aadharNumber);
+      formDataToSend.append('aadhaarNumber', kycData.aadharNumber);
       formDataToSend.append('panNumber', kycData.panNumber);
       formDataToSend.append('nationality', kycData.nationality);
       formDataToSend.append('address', kycData.address);

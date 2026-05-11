@@ -6,6 +6,12 @@ export const register = async (userData) => {
   return response.data;
 };
 
+// Verify email after registration
+export const verifyEmail = async (email, otp) => {
+  const response = await apiClient.post('/auth/verify-email', { email, otp });
+  return response.data;
+};
+
 // Login with email/password
 export const loginWithEmail = async (email, password) => {
   const response = await apiClient.post('/auth/login-email', { email, password });
@@ -24,58 +30,10 @@ export const verify2FAPIN = async (pin) => {
   return response.data;
 };
 
-// Request 2FA code (OTP)
-export const request2FACode = async () => {
-  const response = await apiClient.post('/auth/request-2fa');
-  return response.data;
-};
-
-// Verify 2FA code
-export const verify2FACode = async (code) => {
-  const response = await apiClient.post('/auth/verify-2fa', { code });
-  return response.data;
-};
-
-// Logout
-export const logout = async () => {
-  const response = await apiClient.post('/auth/logout');
-  return response.data;
-};
-
-// Refresh token
-export const refreshToken = async (refreshToken) => {
-  const response = await apiClient.post('/auth/refresh-token', { refreshToken });
-  return response.data;
-};
-
-// Get current user
-export const getCurrentUser = async () => {
-  const response = await apiClient.get('/auth/me');
-  return response.data;
-};
-
-// Update user profile
-export const updateUserProfile = async (userData) => {
-  const response = await apiClient.put('/auth/profile', userData);
-  return response.data;
-};
-
-// Submit KYC details
-export const submitKYC = async (kycData) => {
-  const response = await apiClient.post('/auth/kyc-submit', kycData);
-  return response.data;
-};
-
-// Get KYC status
-export const getKYCStatus = async () => {
-  const response = await apiClient.get('/auth/kyc-status');
-  return response.data;
-};
-
 // Change password
-export const changePassword = async (oldPassword, newPassword) => {
-  const response = await apiClient.post('/auth/change-password', {
-    oldPassword,
+export const changePassword = async (currentPassword, newPassword) => {
+  const response = await apiClient.patch('/auth/change-password', {
+    currentPassword,
     newPassword,
   });
   return response.data;
@@ -97,7 +55,19 @@ export const resetPassword = async (email, otp, newPassword) => {
   return response.data;
 };
 
-// Setup 2FA PIN
+// Submit KYC details
+export const submitKYC = async (kycData) => {
+  const response = await apiClient.post('/auth/submit-kyc', kycData);
+  return response.data;
+};
+
+// Get KYC data for admin review
+export const getKYCData = async (userId) => {
+  const response = await apiClient.get(`/auth/kyc-data/${userId}`);
+  return response.data;
+};
+
+// Setup 2FA PIN (after KYC verified)
 export const setup2FAPIN = async (pin, otp) => {
   const response = await apiClient.post('/auth/setup-2fa-pin', { pin, otp });
   return response.data;
@@ -115,5 +85,41 @@ export const change2FAPIN = async (currentPin, newPin) => {
 // Disable 2FA
 export const disable2FA = async () => {
   const response = await apiClient.patch('/auth/disable-2fa');
+  return response.data;
+};
+
+// Approve customer account (admin only)
+export const approveCustomerAccount = async (userId, adminMessage) => {
+  const response = await apiClient.patch(`/auth/admin/approve-account/${userId}`, {
+    adminMessage,
+  });
+  return response.data;
+};
+
+// Review KYC (admin only)
+export const reviewKYC = async (userId, action, rejectionReason) => {
+  const response = await apiClient.patch(`/auth/admin/review-kyc/${userId}`, {
+    action,
+    rejectionReason,
+  });
+  return response.data;
+};
+
+// Get all users (admin only)
+export const getAllUsers = async (filters = {}) => {
+  const response = await apiClient.get('/auth/admin/users', {
+    params: filters,
+  });
+  return response.data;
+};
+
+// Create support user (admin only)
+export const createSupportUser = async (firstName, lastName, email, password) => {
+  const response = await apiClient.post('/auth/create-support', {
+    firstName,
+    lastName,
+    email,
+    password,
+  });
   return response.data;
 };
