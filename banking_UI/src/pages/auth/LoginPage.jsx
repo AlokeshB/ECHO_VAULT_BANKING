@@ -23,7 +23,6 @@ export const LoginPage = () => {
   // 2FA state
   const [twoFACode, setTwoFACode] = useState('');
   const [loginStage, setLoginStage] = useState('credentials'); // 'credentials' or '2fa'
-  const [tempUserId, setTempUserId] = useState(null);
 
   const handleEmailChange = (e) => {
     const { name, value } = e.target;
@@ -96,7 +95,6 @@ export const LoginPage = () => {
 
       // Check if 2FA is required
       if (response.twoFactorRequired) {
-        setTempUserId(response.user?.id);
         setLoginStage('2fa');
         dispatch(setTwoFactorRequired(true));
       } else if (response.user) {
@@ -227,47 +225,7 @@ export const LoginPage = () => {
     );
   }
 
-  if (loginStage === 'mpin') {
-    return (
-      <div className="login-page">
-        <Container className="d-flex align-items-center justify-content-center min-vh-100">
-          <Card className="login-card w-100" style={{ maxWidth: '400px' }}>
-            <Card.Body>
-              <h3 className="mb-4 text-center">Set Your mPIN</h3>
-              
-              {apiError && <Alert variant="danger">{apiError}</Alert>}
 
-              <p className="text-muted text-center mb-4">
-                Please set a 4-digit mPIN for secure transactions
-              </p>
-
-              <Form onSubmit={handleVerifyMPin}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Enter 4-Digit mPIN</Form.Label>
-                  <Form.Control
-                    type="password"
-                    placeholder="0000"
-                    value={mPinCode}
-                    onChange={(e) => setMPinCode(e.target.value.slice(0, 4))}
-                    maxLength="4"
-                    isInvalid={!!errors.mPinCode}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.mPinCode}
-                  </Form.Control.Feedback>
-                </Form.Group>
-
-                <Button
-                  variant="primary"
-                  type="submit"
-                  className="w-100"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Setting mPIN...' : 'Continue'}
-                </Button>
-              </Form>
-
-  }
 
   return (
     <div className="login-page" data-login-type={userType}>
